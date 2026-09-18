@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
+  <!-- Full-bleed mark: iOS/Android apply their own rounded mask. -->
+  <defs>
+    <linearGradient id="ez-bg" x1="6" y1="0" x2="34" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5CE1EA" />
+      <stop offset="0.48" stop-color="#159EAD" />
+      <stop offset="1" stop-color="#0B3E4B" />
+    </linearGradient>
+    <linearGradient id="ez-sheen" x1="20" y1="0" x2="20" y2="22" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity="0.28" />
+      <stop offset="1" stop-color="#fff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <rect width="40" height="40" fill="url(#ez-bg)" />
+  <rect width="40" height="40" fill="url(#ez-sheen)" />
+  <rect x="13" y="8.2" width="18.5" height="13" rx="2.6" fill="#fff" fill-opacity="0.36" transform="rotate(-16 22.25 14.7)" />
+  <rect x="8.5" y="15.4" width="23" height="16.2" rx="3.2" fill="#fff" />
+  <rect x="8.5" y="15.4" width="23" height="5.4" rx="3.2" fill="#EAF6F8" />
+  <rect x="8.5" y="18.2" width="23" height="2.6" fill="#EAF6F8" />
+  <rect x="8.5" y="20.35" width="23" height="1.7" fill="#9AD9E0" />
+  <circle cx="26.7" cy="26.9" r="4.05" fill="#F5C84B" />
+  <circle cx="26.7" cy="26.9" r="2.55" fill="none" stroke="#C9951E" stroke-width="1.15" />
+  <path d="M25.15 25.45a1.35 1.35 0 0 1 1.7-.2" stroke="#FEF3C7" stroke-width="0.9" stroke-linecap="round" />
+</svg>

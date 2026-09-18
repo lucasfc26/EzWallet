@@ -138,7 +138,7 @@ export function AppLayout() {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-surface/90 px-4 py-3 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-surface/90 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur lg:hidden">
         <BrandLogo size="sm" subtitle={`Saldo ${formatCents(summary.balance)}`} />
         <div className="flex items-center gap-2">
           <button
@@ -158,7 +158,7 @@ export function AppLayout() {
         </div>
       </header>
 
-      <main className="pb-24 lg:pb-10 lg:pl-60">
+      <main className="pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-10 lg:pl-60">
         <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 lg:py-8">
           <SpendCapBanner />
           <Outlet />
@@ -166,7 +166,7 @@ export function AppLayout() {
       </main>
 
       {/* Bottom navigation — mobile */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         <div className="grid grid-cols-5">
           {NAV.map((item) => (
             <NavLink
