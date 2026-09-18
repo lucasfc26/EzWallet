@@ -1,0 +1,139 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Runtime role (RLS-restricted). See MIGRATE_DATABASE_URL below for the schema-owner role.
+  url       = env("DATABASE_URL")
+  // Schema-owner role, used only for `prisma migrate` / `prisma db push`.
+  directUrl = env("MIGRATE_DATABASE_URL")
+}
+
+/// Application user / account. Owns every Expense, Income and Charge row.
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  expenses      Expense[]
+  incomes       Income[]
+  charges       Charge[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+/// Opaque refresh tokens are never stored in plain text — only a hash, so a DB
+/// leak alone can't be replayed. Enables logout / rotation / revocation.
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+enum ExpenseStatus {
+  paid
+  pending
+}
+
+enum IncomeStatus {
+  received
+  pending
+}
+
+enum ChargeStatus {
+  pending
+  received
+  canceled
+}
+
+enum Recurrence {
+  none
+  weekly
+  monthly
+  yearly
+}
+
+enum PaymentMethod {
+  pix
+  debit
+  credit
+  cash
+  boleto
+  transfer
+}
+
+/// categoryId is a free string validated at the DTO layer against the same
+/// taxonomy defined in frontend/src/data/categories.ts (see ROADMAP.md) —
+/// icons/colors are a UI concern and stay owned by the frontend.
+model Expense {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description   String
+  amount        Int
+  date          DateTime      @db.Date
+  categoryId    String        @map("category_id")
+  paymentMethod PaymentMethod @map("payment_method")
+  status        ExpenseStatus
+  dueDate       DateTime?     @map("due_date") @db.Date
+  notes         String?
+  recurrence    Recurrence    @default(none)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@index([userId, date])
+  @@map("expenses")
+}
+
+model Income {
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description String
+  amount      Int
+  date        DateTime     @db.Date
+  categoryId  String       @map("category_id")
+  status      IncomeStatus
+  chargeId    String?      @unique @map("charge_id")
+  charge      Charge?      @relation(fields: [chargeId], references: [id])
+  notes       String?
+  recurrence  Recurrence   @default(none)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@index([userId, date])
+  @@map("incomes")
+}
+
+model Charge {
+  id          String       @id @default(uuid())
+  userId      String       @map("user_id")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientName  String       @map("client_name")
+  description String
+  amount      Int
+  dueDate     DateTime     @map("due_date") @db.Date
+  status      ChargeStatus
+  receivedAt  DateTime?    @map("received_at") @db.Date
+  notes       String?
+  recurrence  Recurrence   @default(none)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  settledIncome Income?
+
+  @@index([userId, dueDate])
+  @@map("charges")
+}
