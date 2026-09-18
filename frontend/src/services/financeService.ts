@@ -43,7 +43,7 @@ export const financeService = {
     return api.delete(`/expenses/${id}`);
   },
 
-  createIncome(input: IncomeInput): Promise<Income> {
+  createIncome(input: IncomeInput): Promise<Income[]> {
     return api.post("/incomes", input);
   },
 
@@ -55,7 +55,7 @@ export const financeService = {
     return api.delete(`/incomes/${id}`);
   },
 
-  createCharge(input: ChargeInput): Promise<Charge> {
+  createCharge(input: ChargeInput): Promise<Charge[]> {
     return api.post("/charges", input);
   },
 

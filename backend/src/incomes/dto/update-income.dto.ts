@@ -1,6 +1,6 @@
 import { Recurrence, IncomeStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, MinLength } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -37,4 +37,11 @@ export class UpdateIncomeDto {
   @IsOptional()
   @IsEnum(Recurrence)
   recurrence?: Recurrence;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(60)
+  recurrenceCount?: number;
 }

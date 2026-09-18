@@ -17,8 +17,8 @@ export class IncomesController {
 
   @Post()
   async create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateIncomeDto) {
-    const row = await this.incomes.create(user.id, dto);
-    return toIncomeResponse(row);
+    const rows = await this.incomes.create(user.id, dto);
+    return rows.map(toIncomeResponse);
   }
 
   @Patch(':id')

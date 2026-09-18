@@ -141,7 +141,7 @@ export function ExpenseFormModal({
       status: values.status,
       notes: values.notes?.trim() || undefined,
       recurrence: values.recurrence,
-      recurrenceCount: values.recurrence === "none" ? 1 : Number(values.recurrenceCount) || 1,
+      recurrenceCount: values.recurrence === "none" ? 1 : Number(values.recurrenceCount) || 0,
     };
 
     try {
@@ -155,12 +155,21 @@ export function ExpenseFormModal({
       }
       await addExpense(payload);
       const times = payload.recurrence !== "none" ? payload.recurrenceCount ?? 1 : 1;
-      toast(times > 1 ? `${times} lançamentos criados.` : "Gasto adicionado com sucesso.", {
-        description:
-          times > 1
-            ? `${payload.description} será repetido ${times} vezes.`
-            : `${payload.description} lançado.`,
-      });
+      toast(
+        times === 0
+          ? "Gasto recorrente criado."
+          : times > 1
+            ? `${times} lançamentos criados.`
+            : "Gasto adicionado com sucesso.",
+        {
+          description:
+            times === 0
+              ? `${payload.description} se repetirá sempre.`
+              : times > 1
+                ? `${payload.description} será repetido ${times} vezes.`
+                : `${payload.description} lançado.`,
+        },
+      );
       maybeWarnSpendCap(transactions, user?.monthlySpendCap, payload.date, payload.amount, toast);
       if (keepOpen.current) {
         reset({
@@ -314,7 +323,7 @@ export function ExpenseFormModal({
           {recurrence !== "none" && !expense && (
             <Select
               id="recurrenceCount"
-              label="Repetir"
+              label="Parcelas"
               options={RECURRENCE_COUNTS}
               {...register("recurrenceCount")}
             />

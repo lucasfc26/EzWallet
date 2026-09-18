@@ -79,7 +79,7 @@ export default function SettingsPage() {
   const [deleteCardId, setDeleteCardId] = useState<string | null>(null);
   const [deletePaymentId, setDeletePaymentId] = useState<string | null>(null);
   const [deleteCategoryId, setDeleteCategoryId] = useState<string | null>(null);
-  const [categoryKind, setCategoryKind] = useState<CategoryKind>("expense");
+  const [catalogTab, setCatalogTab] = useState<"expense" | "income" | "payment">("expense");
 
   const profileForm = useForm({
     resolver: zodResolver(profileSchema),
@@ -110,7 +110,7 @@ export default function SettingsPage() {
     }
   });
 
-  const visibleCategories = categories.filter((c) => c.kind === categoryKind);
+  const visibleCategories = categories.filter((c) => c.kind === catalogTab);
 
   return (
     <>
@@ -176,56 +176,6 @@ export default function SettingsPage() {
           cards={cards}
           onSave={updateProfile}
         />
-
-        <Card>
-          <CardHeader
-            title="Formas de pagamento"
-            description="Cada conta começa com as mesmas opções. O que você criar, editar ou excluir vale só para você."
-            action={
-              <Button size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => setPaymentModal("new")}>
-                Nova forma
-              </Button>
-            }
-          />
-          {paymentOptions.length === 0 ? (
-            <p className="px-5 py-8 text-center text-[13px] text-foreground-secondary">Nenhuma forma de pagamento cadastrada.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-border text-[11.5px] font-medium uppercase tracking-wide text-foreground-secondary">
-                    <th className="px-5 py-3">Nome</th>
-                    <th className="px-3 py-3">Tipo</th>
-                    <th className="px-3 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {paymentOptions.map((option) => (
-                    <tr key={option.id}>
-                      <td className="px-5 py-3 text-[13.5px] font-medium text-foreground">
-                        {option.name}
-                        {option.slug && <span className="ml-2 text-[11px] font-normal text-foreground-muted">Padrão</span>}
-                      </td>
-                      <td className="px-3 py-3 text-[13px] text-foreground-secondary">
-                        {PAYMENT_METHODS.find((p) => p.id === option.method)?.label ?? option.method}
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" aria-label="Editar forma" onClick={() => setPaymentModal(option)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" aria-label="Excluir forma" onClick={() => setDeletePaymentId(option.id)}>
-                            <Trash2 className="h-3.5 w-3.5 text-danger" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </Card>
 
         <Card>
           <CardHeader title="Alterar senha" description="Informe a senha atual e a nova senha." />
@@ -298,69 +248,118 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader
-            title="Categorias"
-            description="Use nas despesas e receitas. Excluir move os lançamentos para Outros."
+            title="Categorias e pagamentos"
+            description="O que você criar, editar ou excluir vale só para a sua conta."
             action={
-              <Button size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => setCategoryModal("new")}>
-                Nova categoria
-              </Button>
+              catalogTab === "payment" ? (
+                <Button size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => setPaymentModal("new")}>
+                  Nova forma
+                </Button>
+              ) : (
+                <Button size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={() => setCategoryModal("new")}>
+                  Nova categoria
+                </Button>
+              )
             }
           />
           <div className="px-5 pt-3">
             <Tabs
-              value={categoryKind}
-              onChange={setCategoryKind}
+              paged
+              value={catalogTab}
+              onChange={setCatalogTab}
               items={[
                 { value: "expense", label: "Despesas", count: categories.filter((c) => c.kind === "expense").length },
                 { value: "income", label: "Receitas", count: categories.filter((c) => c.kind === "income").length },
+                { value: "payment", label: "Pagamentos", count: paymentOptions.length },
               ]}
             />
           </div>
-          <div className="overflow-x-auto">
-            <table className="mt-2 w-full text-left">
-              <thead>
-                <tr className="border-b border-border text-[11.5px] font-medium uppercase tracking-wide text-foreground-secondary">
-                  <th className="px-5 py-3">Categoria</th>
-                  <th className="px-3 py-3">Cor</th>
-                  <th className="px-3 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {visibleCategories.map((category) => (
-                  <tr key={category.id}>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <CategoryIcon categoryId={category.id} size="sm" />
-                        <div>
-                          <p className="text-[13.5px] font-medium text-foreground">{category.name}</p>
-                          {category.slug && <p className="text-[11px] text-foreground-muted">Padrão</p>}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3">
-                      <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: category.color }} />
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" aria-label="Editar categoria" onClick={() => setCategoryModal(category)}>
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="Excluir categoria"
-                          onClick={() => setDeleteCategoryId(category.id)}
-                          disabled={category.slug === "cobrancas" || category.slug === "outros" || category.slug === "outras-receitas"}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-danger" />
-                        </Button>
-                      </div>
-                    </td>
+          {catalogTab === "payment" ? (
+            paymentOptions.length === 0 ? (
+              <p className="px-5 py-8 text-center text-[13px] text-foreground-secondary">Nenhuma forma de pagamento cadastrada.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="mt-2 w-full text-left">
+                  <thead>
+                    <tr className="border-b border-border text-[11.5px] font-medium uppercase tracking-wide text-foreground-secondary">
+                      <th className="px-5 py-3">Nome</th>
+                      <th className="px-3 py-3">Tipo</th>
+                      <th className="px-3 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {paymentOptions.map((option) => (
+                      <tr key={option.id}>
+                        <td className="px-5 py-3 text-[13.5px] font-medium text-foreground">
+                          {option.name}
+                          {option.slug && <span className="ml-2 text-[11px] font-normal text-foreground-muted">Padrão</span>}
+                        </td>
+                        <td className="px-3 py-3 text-[13px] text-foreground-secondary">
+                          {PAYMENT_METHODS.find((p) => p.id === option.method)?.label ?? option.method}
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="icon" aria-label="Editar forma" onClick={() => setPaymentModal(option)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" aria-label="Excluir forma" onClick={() => setDeletePaymentId(option.id)}>
+                              <Trash2 className="h-3.5 w-3.5 text-danger" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="mt-2 w-full text-left">
+                <thead>
+                  <tr className="border-b border-border text-[11.5px] font-medium uppercase tracking-wide text-foreground-secondary">
+                    <th className="px-5 py-3">Categoria</th>
+                    <th className="px-3 py-3">Cor</th>
+                    <th className="px-3 py-3" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {visibleCategories.map((category) => (
+                    <tr key={category.id}>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-3">
+                          <CategoryIcon categoryId={category.id} size="sm" />
+                          <div>
+                            <p className="text-[13.5px] font-medium text-foreground">{category.name}</p>
+                            {category.slug && <p className="text-[11px] text-foreground-muted">Padrão</p>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: category.color }} />
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" aria-label="Editar categoria" onClick={() => setCategoryModal(category)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Excluir categoria"
+                            onClick={() => setDeleteCategoryId(category.id)}
+                            disabled={category.slug === "cobrancas" || category.slug === "outros" || category.slug === "outras-receitas"}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-danger" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </Card>
       </div>
 
@@ -391,7 +390,7 @@ export default function SettingsPage() {
       <CategoryFormModal
         open={categoryModal !== null}
         category={categoryModal === "new" ? null : categoryModal}
-        defaultKind={categoryKind}
+        defaultKind={catalogTab === "payment" ? "expense" : catalogTab}
         onClose={() => setCategoryModal(null)}
         onSave={async (input) => {
           if (categoryModal && categoryModal !== "new") {

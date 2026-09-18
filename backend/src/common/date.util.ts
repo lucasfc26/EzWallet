@@ -15,3 +15,18 @@ export function addRecurrence(date: Date, recurrence: 'weekly' | 'monthly' | 'ye
   else next.setUTCFullYear(next.getUTCFullYear() + times);
   return next;
 }
+
+/** 0 on the wire means Sempre. We still materialize a finite horizon. */
+export function expandRecurrenceCount(
+  recurrence: 'none' | 'weekly' | 'monthly' | 'yearly',
+  count?: number,
+): { stored: number; expand: number } {
+  if (recurrence === 'none') return { stored: 1, expand: 1 };
+  const requested = count ?? 1;
+  if (requested <= 0) {
+    const expand = recurrence === 'weekly' ? 104 : recurrence === 'yearly' ? 10 : 36;
+    return { stored: 0, expand };
+  }
+  const bounded = Math.min(60, requested);
+  return { stored: bounded, expand: bounded };
+}

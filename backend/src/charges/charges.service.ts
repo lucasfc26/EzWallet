@@ -1,9 +1,10 @@
+import { randomUUID } from 'crypto';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { IncomesService } from '../incomes/incomes.service';
 import { CreateChargeDto } from './dto/create-charge.dto';
 import { UpdateChargeDto } from './dto/update-charge.dto';
-import { parseISODate, toISODate } from '../common/date.util';
+import { addRecurrence, expandRecurrenceCount, parseISODate, toISODate } from '../common/date.util';
 
 @Injectable()
 export class ChargesService {
@@ -17,20 +18,34 @@ export class ChargesService {
   }
 
   create(userId: string, dto: CreateChargeDto) {
-    return this.prisma.forUser(userId, (tx) =>
-      tx.charge.create({
-        data: {
-          userId,
-          clientName: dto.clientName,
-          description: dto.description,
-          amount: dto.amount,
-          dueDate: parseISODate(dto.dueDate),
-          notes: dto.notes,
-          recurrence: dto.recurrence,
-          status: 'pending',
-        },
-      }),
-    );
+    const { stored, expand } = expandRecurrenceCount(dto.recurrence, dto.recurrenceCount);
+    const groupId = expand > 1 ? randomUUID() : null;
+    const start = parseISODate(dto.dueDate);
+
+    return this.prisma.forUser(userId, async (tx) => {
+      const rows = [];
+      for (let i = 0; i < expand; i += 1) {
+        const dueDate = i === 0 || dto.recurrence === 'none' ? start : addRecurrence(start, dto.recurrence, i);
+        rows.push(
+          await tx.charge.create({
+            data: {
+              userId,
+              clientName: dto.clientName,
+              description: dto.description,
+              amount: dto.amount,
+              dueDate,
+              notes: dto.notes,
+              recurrence: dto.recurrence,
+              recurrenceCount: stored,
+              recurrenceGroupId: groupId,
+              recurrenceIndex: i + 1,
+              status: 'pending',
+            },
+          }),
+        );
+      }
+      return rows;
+    });
   }
 
   async update(userId: string, id: string, dto: UpdateChargeDto) {
@@ -48,6 +63,7 @@ export class ChargesService {
           dueDate: dto.dueDate ? parseISODate(dto.dueDate) : undefined,
           notes: dto.notes,
           recurrence: dto.recurrence,
+          recurrenceCount: dto.recurrenceCount,
           status: dto.status,
         },
       }),
@@ -57,7 +73,10 @@ export class ChargesService {
   }
 
   async remove(userId: string, id: string) {
-    const result = await this.prisma.forUser(userId, (tx) => tx.charge.deleteMany({ where: { id, userId } }));
+    const result = await this.prisma.forUser(userId, async (tx) => {
+      await tx.income.deleteMany({ where: { chargeId: id, userId } });
+      return tx.charge.deleteMany({ where: { id, userId } });
+    });
     if (result.count === 0) throw new NotFoundException('Cobrança não encontrada.');
   }
 
@@ -113,6 +132,9 @@ export function toChargeResponse(row: {
   receivedAt: Date | null;
   notes: string | null;
   recurrence: string;
+  recurrenceCount?: number;
+  recurrenceGroupId?: string | null;
+  recurrenceIndex?: number;
   createdAt: Date;
 }) {
   return {
@@ -125,6 +147,9 @@ export function toChargeResponse(row: {
     receivedAt: row.receivedAt ? toISODate(row.receivedAt) : undefined,
     notes: row.notes ?? undefined,
     recurrence: row.recurrence,
+    recurrenceCount: row.recurrenceCount ?? 1,
+    recurrenceGroupId: row.recurrenceGroupId ?? undefined,
+    recurrenceIndex: row.recurrenceIndex ?? 1,
     createdAt: row.createdAt.toISOString(),
   };
 }

@@ -196,12 +196,15 @@ model Income {
   categoryId  String       @map("category_id")
   category    Category     @relation(fields: [categoryId], references: [id])
   status      IncomeStatus
-  chargeId    String?      @unique @map("charge_id")
-  charge      Charge?      @relation(fields: [chargeId], references: [id])
-  notes       String?
-  recurrence  Recurrence   @default(none)
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
+  chargeId          String?     @unique @map("charge_id")
+  charge            Charge?     @relation(fields: [chargeId], references: [id], onDelete: Cascade)
+  notes             String?
+  recurrence        Recurrence  @default(none)
+  recurrenceCount   Int         @default(1) @map("recurrence_count")
+  recurrenceGroupId String?     @map("recurrence_group_id")
+  recurrenceIndex   Int         @default(1) @map("recurrence_index")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
 
   @@index([userId, date])
   @@map("incomes")
@@ -217,10 +220,13 @@ model Charge {
   dueDate     DateTime     @map("due_date") @db.Date
   status      ChargeStatus
   receivedAt  DateTime?    @map("received_at") @db.Date
-  notes       String?
-  recurrence  Recurrence   @default(none)
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
+  notes             String?
+  recurrence        Recurrence   @default(none)
+  recurrenceCount   Int          @default(1) @map("recurrence_count")
+  recurrenceGroupId String?      @map("recurrence_group_id")
+  recurrenceIndex   Int          @default(1) @map("recurrence_index")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
   settledIncome Income?
 

@@ -125,10 +125,19 @@ export const RECURRENCE_LABEL: Record<string, string> = {
   yearly: "Anual",
 };
 
-export const RECURRENCE_COUNTS = Array.from({ length: 60 }, (_, i) => {
-  const n = i + 1;
-  return { value: String(n), label: `${n}x` };
-});
+export const RECURRENCE_COUNTS = [
+  { value: "0", label: "Sempre" },
+  ...Array.from({ length: 60 }, (_, i) => {
+    const n = i + 1;
+    return { value: String(n), label: `${n}x` };
+  }),
+];
+
+export function recurrenceParcelLabel(count?: number, index?: number): string | null {
+  if (count === 0) return "Sempre";
+  if ((count ?? 1) > 1) return `${index ?? 1}/${count}`;
+  return null;
+}
 
 export const CATEGORY_ICONS = [
   "utensils",

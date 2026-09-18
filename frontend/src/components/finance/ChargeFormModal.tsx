@@ -7,7 +7,8 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Input, Select, Textarea, DatePicker } from "../ui/Field";
 import { CurrencyInput } from "../ui/CurrencyInput";
-import { RECURRENCE_OPTIONS } from "../../data/categories";
+import { RECURRENCE_COUNTS, RECURRENCE_OPTIONS } from "../../data/categories";
+import { cn } from "../../utils/cn";
 import { todayISO } from "../../lib/dates";
 import { useFinance } from "../../hooks/useFinance";
 import { useToast } from "../../hooks/useToast";
@@ -20,6 +21,7 @@ const schema = z.object({
   dueDate: z.string().min(1, "Selecione o vencimento"),
   notes: z.string().max(240).optional(),
   recurrence: z.enum(["none", "weekly", "monthly", "yearly"]),
+  recurrenceCount: z.string(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -31,6 +33,7 @@ const emptyValues: FormValues = {
   dueDate: todayISO(),
   notes: "",
   recurrence: "none",
+  recurrenceCount: "1",
 };
 
 export function ChargeFormModal({
@@ -51,11 +54,13 @@ export function ChargeFormModal({
     handleSubmit,
     control,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: emptyValues,
   });
+  const recurrence = watch("recurrence");
 
   useEffect(() => {
     if (!open) return;
@@ -68,6 +73,7 @@ export function ChargeFormModal({
             dueDate: charge.dueDate,
             notes: charge.notes ?? "",
             recurrence: charge.recurrence,
+            recurrenceCount: String(charge.recurrenceCount ?? 1),
           }
         : emptyValues,
     );
@@ -83,20 +89,29 @@ export function ChargeFormModal({
       dueDate: values.dueDate,
       notes: values.notes?.trim() || undefined,
       recurrence: values.recurrence,
+      recurrenceCount: values.recurrence === "none" ? 1 : Number(values.recurrenceCount) || 0,
     };
     try {
       if (charge) {
         await updateCharge(charge.id, payload);
-        toast("Cobrança atualizada.");
+        toast("Receita atualizada.");
       } else {
         await addCharge(payload);
-        toast("Cobrança criada.", {
-          description: `${payload.clientName} — ${payload.description}`,
-        });
+        const times = payload.recurrence !== "none" ? payload.recurrenceCount ?? 1 : 1;
+        toast(
+          times === 0
+            ? "Receita recorrente criada."
+            : times > 1
+              ? `${times} receitas criadas.`
+              : "Receita criada.",
+          {
+            description: `${payload.clientName} — ${payload.description}`,
+          },
+        );
       }
       onClose();
     } catch {
-      toast("Não foi possível salvar a cobrança.", { variant: "error" });
+      toast("Não foi possível salvar a receita.", { variant: "error" });
     }
   });
 
@@ -106,7 +121,7 @@ export function ChargeFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={charge ? "Editar cobrança" : "Nova receita"}
+      title={charge ? "Editar receita" : "Nova receita"}
       description="Registre um valor que você tem a receber."
       footer={
         <div className="flex justify-end gap-2">
@@ -119,7 +134,7 @@ export function ChargeFormModal({
             loading={isSubmitting}
             icon={<Check className="h-4 w-4" />}
           >
-            {charge ? "Salvar alterações" : "Criar cobrança"}
+            {charge ? "Salvar alterações" : "Criar receita"}
           </Button>
         </div>
       }
@@ -166,12 +181,22 @@ export function ChargeFormModal({
             {...register("dueDate")}
           />
         </div>
-        <Select
-          id="charge-recurrence"
-          label="Recorrência"
-          options={RECURRENCE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
-          {...register("recurrence")}
-        />
+        <div className={cn("grid gap-4", recurrence !== "none" && !charge && "sm:grid-cols-2")}>
+          <Select
+            id="charge-recurrence"
+            label="Recorrência"
+            options={RECURRENCE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
+            {...register("recurrence")}
+          />
+          {recurrence !== "none" && !charge && (
+            <Select
+              id="charge-recurrence-count"
+              label="Parcelas"
+              options={RECURRENCE_COUNTS}
+              {...register("recurrenceCount")}
+            />
+          )}
+        </div>
         <Textarea
           id="charge-notes"
           label="Observação (opcional)"

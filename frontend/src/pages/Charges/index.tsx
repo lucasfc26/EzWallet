@@ -23,10 +23,12 @@ import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { SummaryCard } from "../../components/finance/SummaryCard";
 import { ChargeStatusBadge, chargeStatusKey } from "../../components/finance/StatusBadge";
 import { ChargeFormModal } from "../../components/finance/ChargeFormModal";
+import { CatalogFilters } from "../../components/finance/CatalogFilters";
 import { useFinance } from "../../hooks/useFinance";
 import { useToast } from "../../hooks/useToast";
 import { buildPeriod, dueLabel, formatBR, isInPeriod } from "../../lib/dates";
 import { formatCents, sum } from "../../lib/money";
+import { chargeMatchesFilters } from "../../lib/filters";
 import { isChargeOverdue } from "../../lib/selectors";
 import { RECURRENCE_LABEL } from "../../data/categories";
 import type { Charge, Period } from "../../types";
@@ -34,7 +36,7 @@ import type { Charge, Period } from "../../types";
 type Filter = "all" | "pending" | "overdue" | "received" | "canceled";
 
 export default function ChargesPage() {
-  const { charges, loading, settleCharge, removeCharge, cancelCharge, duplicateCharge } =
+  const { charges, transactions, categories, cards, paymentOptions, loading, settleCharge, removeCharge, cancelCharge, duplicateCharge } =
     useFinance();
   const { toast } = useToast();
 
@@ -43,22 +45,28 @@ export default function ChargesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Charge | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState("all");
+  const [payment, setPayment] = useState("all");
 
-  const pending = charges.filter((c) => c.status === "pending");
+  const catalogCharges = useMemo(
+    () => charges.filter((c) => chargeMatchesFilters(c, transactions, categoryId, payment)),
+    [charges, transactions, categoryId, payment],
+  );
+  const pending = catalogCharges.filter((c) => c.status === "pending");
   const overdue = pending.filter(isChargeOverdue);
-  const receivedInPeriod = charges.filter(
+  const receivedInPeriod = catalogCharges.filter(
     (c) => c.status === "received" && c.receivedAt && isInPeriod(c.receivedAt, period),
   );
 
   const filtered = useMemo(() => {
     const list =
       filter === "all"
-        ? charges
-        : charges.filter((c) => chargeStatusKey(c) === filter);
+        ? catalogCharges
+        : catalogCharges.filter((c) => chargeStatusKey(c) === filter);
     return [...list].sort(
       (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
     );
-  }, [charges, filter]);
+  }, [catalogCharges, filter]);
 
   const openNew = () => {
     setEditing(null);
@@ -67,7 +75,7 @@ export default function ChargesPage() {
 
   const handleSettle = async (charge: Charge) => {
     await settleCharge(charge.id);
-    toast("Cobrança recebida.", {
+    toast("Receita recebida.", {
       description: `${formatCents(charge.amount)} de ${charge.clientName} entraram como receita.`,
     });
   };
@@ -76,11 +84,11 @@ export default function ChargesPage() {
     if (!confirmId) return;
     await removeCharge(confirmId);
     setConfirmId(null);
-    toast("Cobrança excluída.", { variant: "info" });
+    toast("Receita excluída.", { variant: "info" });
   };
 
   const copySummary = async (charge: Charge) => {
-    const text = `Cobrança — ${charge.description}\nCliente: ${charge.clientName}\nValor: ${formatCents(
+    const text = `Receita — ${charge.description}\nCliente: ${charge.clientName}\nValor: ${formatCents(
       charge.amount,
     )}\nVencimento: ${formatBR(charge.dueDate)}`;
     try {
@@ -99,7 +107,7 @@ export default function ChargesPage() {
       onSelect: () => void handleSettle(charge),
     },
     {
-      label: "Editar cobrança",
+      label: "Editar receita",
       icon: <Pencil className="h-3.5 w-3.5" />,
       onSelect: () => {
         setEditing(charge);
@@ -111,7 +119,7 @@ export default function ChargesPage() {
       icon: <Copy className="h-3.5 w-3.5" />,
       onSelect: async () => {
         await duplicateCharge(charge.id);
-        toast("Cobrança duplicada.");
+        toast("Receita duplicada.");
       },
     },
     {
@@ -120,12 +128,12 @@ export default function ChargesPage() {
       onSelect: () => void copySummary(charge),
     },
     {
-      label: "Cancelar cobrança",
+      label: "Cancelar receita",
       icon: <Ban className="h-3.5 w-3.5" />,
       hidden: charge.status !== "pending",
       onSelect: async () => {
         await cancelCharge(charge.id);
-        toast("Cobrança cancelada.", { variant: "info" });
+        toast("Receita cancelada.", { variant: "info" });
       },
     },
     {
@@ -139,7 +147,7 @@ export default function ChargesPage() {
   return (
     <>
       <PageHeader
-        title="Cobranças"
+        title="Receita"
         subtitle="Controle o que você tem a receber de clientes e pessoas."
         actions={
           <Button icon={<Plus className="h-4 w-4" />} onClick={openNew}>
@@ -154,7 +162,7 @@ export default function ChargesPage() {
           value={sum(pending.map((c) => c.amount))}
           icon={<Wallet className="h-3.5 w-3.5" />}
           tone="violet"
-          hint={`${pending.length} cobrança(s) em aberto`}
+          hint={`${pending.length} receita(s) em aberto`}
         />
         <SummaryCard
           label="Pendentes"
@@ -175,7 +183,7 @@ export default function ChargesPage() {
           value={sum(receivedInPeriod.map((c) => c.amount))}
           icon={<CheckCircle2 className="h-3.5 w-3.5" />}
           tone="green"
-          hint={`${receivedInPeriod.length} cobrança(s)`}
+          hint={`${receivedInPeriod.length} receita(s)`}
         />
       </div>
 
@@ -185,7 +193,7 @@ export default function ChargesPage() {
           value={filter}
           onChange={setFilter}
           items={[
-            { value: "all", label: "Todas", count: charges.length },
+            { value: "all", label: "Todas", count: catalogCharges.length },
             {
               value: "pending",
               label: "Pendentes",
@@ -195,29 +203,41 @@ export default function ChargesPage() {
             {
               value: "received",
               label: "Recebidas",
-              count: charges.filter((c) => c.status === "received").length,
+              count: catalogCharges.filter((c) => c.status === "received").length,
             },
             {
               value: "canceled",
               label: "Canceladas",
-              count: charges.filter((c) => c.status === "canceled").length,
+              count: catalogCharges.filter((c) => c.status === "canceled").length,
             },
           ]}
         />
-        <PeriodFilter
-          period={period}
-          onChange={setPeriod}
-          presets={["month", "year", "custom"]}
-        />
+        <div className="flex flex-col gap-2 sm:items-end">
+          <PeriodFilter
+            period={period}
+            onChange={setPeriod}
+            presets={["month", "year", "custom"]}
+          />
+          <CatalogFilters
+            categories={categories}
+            paymentOptions={paymentOptions}
+            cards={cards}
+            categoryId={categoryId}
+            payment={payment}
+            onCategoryChange={setCategoryId}
+            onPaymentChange={setPayment}
+            categoryKind="income"
+          />
+        </div>
       </div>
 
       <Card>
         {loading ? (
-          <LoadingState label="Carregando cobranças..." />
+          <LoadingState label="Carregando receitas..." />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<HandCoins className="h-5 w-5" />}
-            title="Nenhuma cobrança por aqui"
+            title="Nenhuma receita por aqui"
             description="Registre valores que você precisa receber, sem burocracia."
             action={
               <Button size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={openNew}>
@@ -241,6 +261,11 @@ export default function ChargesPage() {
                     {charge.recurrence !== "none" && (
                       <span className="text-[11px] text-foreground-muted">
                         {RECURRENCE_LABEL[charge.recurrence]}
+                        {charge.recurrenceCount === 0
+                          ? " · Sempre"
+                          : (charge.recurrenceCount ?? 1) > 1
+                            ? ` · ${charge.recurrenceIndex ?? 1}/${charge.recurrenceCount}`
+                            : ""}
                       </span>
                     )}
                   </div>
@@ -289,8 +314,8 @@ export default function ChargesPage() {
 
       <ConfirmDialog
         open={confirmId !== null}
-        title="Excluir cobrança"
-        message="A cobrança será removida permanentemente. As receitas já recebidas continuam no histórico."
+        title="Excluir receita"
+        message="A receita será removida e o valor sairá do saldo disponível."
         confirmLabel="Excluir"
         onConfirm={handleDelete}
         onCancel={() => setConfirmId(null)}

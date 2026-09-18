@@ -4,7 +4,7 @@ import { PaymentMethod, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
-import { addRecurrence, parseISODate, toISODate } from '../common/date.util';
+import { addRecurrence, expandRecurrenceCount, parseISODate, toISODate } from '../common/date.util';
 import { requireCategory } from '../categories/categories.service';
 
 @Injectable()
@@ -18,9 +18,8 @@ export class ExpensesService {
   }
 
   async create(userId: string, dto: CreateExpenseDto) {
-    const count =
-      dto.recurrence === 'none' ? 1 : Math.min(60, Math.max(1, dto.recurrenceCount ?? 1));
-    const groupId = count > 1 ? randomUUID() : null;
+    const { stored, expand } = expandRecurrenceCount(dto.recurrence, dto.recurrenceCount);
+    const groupId = expand > 1 ? randomUUID() : null;
     const start = parseISODate(dto.date);
 
     return this.prisma.forUser(userId, async (tx) => {
@@ -34,7 +33,7 @@ export class ExpensesService {
       );
 
       const rows = [];
-      for (let i = 0; i < count; i += 1) {
+      for (let i = 0; i < expand; i += 1) {
         const date = i === 0 || dto.recurrence === 'none' ? start : addRecurrence(start, dto.recurrence, i);
         const status = i === 0 ? dto.status : 'pending';
         const dueDate = status === 'pending' ? date : null;
@@ -52,7 +51,7 @@ export class ExpensesService {
               status,
               notes: dto.notes,
               recurrence: dto.recurrence,
-              recurrenceCount: count,
+              recurrenceCount: stored,
               recurrenceGroupId: groupId,
               recurrenceIndex: i + 1,
               dueDate,

@@ -57,7 +57,7 @@ export class UpdateExpenseDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(1)
+  @Min(0)
   @Max(60)
   recurrenceCount?: number;
 }

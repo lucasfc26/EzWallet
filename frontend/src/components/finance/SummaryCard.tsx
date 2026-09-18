@@ -20,6 +20,8 @@ export function SummaryCard({
   hint,
   className,
   highlight = false,
+  selected = false,
+  onClick,
 }: {
   label: string;
   value: number;
@@ -28,15 +30,24 @@ export function SummaryCard({
   hint?: string;
   className?: string;
   highlight?: boolean;
+  selected?: boolean;
+  onClick?: () => void;
 }) {
   const styles = toneStyles[tone];
+  const Tag = onClick ? "button" : "div";
   return (
-    <div
+    <Tag
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      aria-pressed={onClick ? selected : undefined}
       className={cn(
-        "rounded-2xl border p-4 transition-shadow hover:shadow-sm",
+        "rounded-2xl border p-4 text-left transition-shadow hover:shadow-sm",
         highlight
           ? "border-primary/20 bg-primary text-white"
           : "border-border bg-surface",
+        onClick && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+        selected && !highlight && "ring-2 ring-primary/40 border-primary/40",
+        selected && highlight && "ring-2 ring-white/50",
         className,
       )}
     >
@@ -76,6 +87,6 @@ export function SummaryCard({
           {hint}
         </p>
       )}
-    </div>
+    </Tag>
   );
 }

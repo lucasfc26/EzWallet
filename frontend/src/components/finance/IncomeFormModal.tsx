@@ -7,7 +7,8 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Input, Select, Textarea, DatePicker } from "../ui/Field";
 import { CurrencyInput } from "../ui/CurrencyInput";
-import { RECURRENCE_OPTIONS } from "../../data/categories";
+import { RECURRENCE_COUNTS, RECURRENCE_OPTIONS } from "../../data/categories";
+import { cn } from "../../utils/cn";
 import { todayISO } from "../../lib/dates";
 import { useFinance } from "../../hooks/useFinance";
 import { useToast } from "../../hooks/useToast";
@@ -21,6 +22,7 @@ const schema = z.object({
   status: z.enum(["received", "pending"]),
   notes: z.string().max(240).optional(),
   recurrence: z.enum(["none", "weekly", "monthly", "yearly"]),
+  recurrenceCount: z.string(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -33,6 +35,7 @@ const emptyValues: FormValues = {
   status: "received",
   notes: "",
   recurrence: "none",
+  recurrenceCount: "1",
 };
 
 export function IncomeFormModal({
@@ -55,11 +58,13 @@ export function IncomeFormModal({
     handleSubmit,
     control,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: emptyValues,
   });
+  const recurrence = watch("recurrence");
 
   useEffect(() => {
     if (!open) return;
@@ -73,6 +78,7 @@ export function IncomeFormModal({
             status: income.status,
             notes: income.notes ?? "",
             recurrence: income.recurrence,
+            recurrenceCount: String(income.recurrenceCount ?? 1),
           }
         : { ...emptyValues, categoryId: defaultCategoryId },
     );
@@ -89,6 +95,7 @@ export function IncomeFormModal({
       status: values.status,
       notes: values.notes?.trim() || undefined,
       recurrence: values.recurrence,
+      recurrenceCount: values.recurrence === "none" ? 1 : Number(values.recurrenceCount) || 0,
     };
     try {
       if (income) {
@@ -96,7 +103,14 @@ export function IncomeFormModal({
         toast("Movimentação atualizada.");
       } else {
         await addIncome(payload);
-        toast("Receita registrada com sucesso.");
+        const times = payload.recurrence !== "none" ? payload.recurrenceCount ?? 1 : 1;
+        toast(
+          times === 0
+            ? "Receita recorrente criada."
+            : times > 1
+              ? `${times} receitas criadas.`
+              : "Receita registrada com sucesso.",
+        );
       }
       onClose();
     } catch {
@@ -184,12 +198,22 @@ export function IncomeFormModal({
             {...register("status")}
           />
         </div>
-        <Select
-          id="income-recurrence"
-          label="Recorrência"
-          options={RECURRENCE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
-          {...register("recurrence")}
-        />
+        <div className={cn("grid gap-4", recurrence !== "none" && !income && "sm:grid-cols-2")}>
+          <Select
+            id="income-recurrence"
+            label="Recorrência"
+            options={RECURRENCE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
+            {...register("recurrence")}
+          />
+          {recurrence !== "none" && !income && (
+            <Select
+              id="income-recurrence-count"
+              label="Parcelas"
+              options={RECURRENCE_COUNTS}
+              {...register("recurrenceCount")}
+            />
+          )}
+        </div>
         <Textarea
           id="income-notes"
           label="Observação (opcional)"

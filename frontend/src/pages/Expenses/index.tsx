@@ -20,11 +20,13 @@ import { DropdownMenu } from "../../components/ui/DropdownMenu";
 import { EmptyState, LoadingState } from "../../components/ui/States";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { CategoryIcon } from "../../components/finance/CategoryBadge";
+import { CatalogFilters } from "../../components/finance/CatalogFilters";
 import { ExpenseFormModal } from "../../components/finance/ExpenseFormModal";
 import { useFinance } from "../../hooks/useFinance";
 import { useToast } from "../../hooks/useToast";
 import { buildPeriod, formatBR, periodLabel } from "../../lib/dates";
 import { formatCents, sum } from "../../lib/money";
+import { matchesPayment } from "../../lib/filters";
 import { inPeriod, isExpense } from "../../lib/selectors";
 import {
   getCategory,
@@ -46,6 +48,7 @@ export default function ExpensesPage() {
 
   const [period, setPeriod] = useState<Period>(() => buildPeriod("month"));
   const [category, setCategory] = useState<string>("all");
+  const [payment, setPayment] = useState<string>("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortAsc, setSortAsc] = useState(false);
@@ -63,6 +66,7 @@ export default function ExpensesPage() {
       : inPeriod(transactions, period).filter(isExpense);
     let list = base;
     if (category !== "all") list = list.filter((e) => e.categoryId === category);
+    if (payment !== "all") list = list.filter((e) => matchesPayment(e, payment));
     if (status !== "all") list = list.filter((e) => e.status === status);
     return [...list].sort((a, b) => {
       const diff =
@@ -71,7 +75,7 @@ export default function ExpensesPage() {
           : new Date(a.date).getTime() - new Date(b.date).getTime();
       return sortAsc ? diff : -diff;
     });
-  }, [transactions, period, category, status, sortKey, sortAsc, query, searching]);
+  }, [transactions, period, category, payment, status, sortKey, sortAsc, query, searching]);
 
   const total = sum(expenses.map((e) => e.amount));
   const pendingTotal = sum(
@@ -210,20 +214,16 @@ export default function ExpensesPage() {
         </div>
         {!searching && <PeriodFilter period={period} onChange={setPeriod} />}
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="h-9 rounded-xl border border-border bg-surface px-3 text-[12.5px] font-medium text-foreground-secondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-          >
-            <option value="all">Todas as categorias</option>
-            {categories
-              .filter((c) => c.kind === "expense")
-              .map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <CatalogFilters
+            categories={categories}
+            paymentOptions={paymentOptions}
+            cards={cards}
+            categoryId={category}
+            payment={payment}
+            onCategoryChange={setCategory}
+            onPaymentChange={setPayment}
+            categoryKind="expense"
+          />
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusFilter)}
@@ -233,12 +233,13 @@ export default function ExpensesPage() {
             <option value="paid">Pagos</option>
             <option value="pending">Pendentes</option>
           </select>
-          {(category !== "all" || status !== "all") && (
+          {(category !== "all" || payment !== "all" || status !== "all") && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 setCategory("all");
+                setPayment("all");
                 setStatus("all");
               }}
             >
@@ -295,8 +296,11 @@ export default function ExpensesPage() {
                             {e.recurrence !== "none" && (
                               <p className="text-[11.5px] text-foreground-muted">
                                 {RECURRENCE_LABEL[e.recurrence]}
-                                {(e.recurrenceCount ?? 1) > 1 &&
-                                  ` · ${e.recurrenceIndex ?? 1}/${e.recurrenceCount}`}
+                                {e.recurrenceCount === 0
+                                  ? " · Sempre"
+                                  : (e.recurrenceCount ?? 1) > 1
+                                    ? ` · ${e.recurrenceIndex ?? 1}/${e.recurrenceCount}`
+                                    : ""}
                               </p>
                             )}
                           </div>

@@ -19,8 +19,8 @@ export class ChargesController {
 
   @Post()
   async create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateChargeDto) {
-    const row = await this.charges.create(user.id, dto);
-    return toChargeResponse(row);
+    const rows = await this.charges.create(user.id, dto);
+    return rows.map(toChargeResponse);
   }
 
   @Patch(':id')

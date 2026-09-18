@@ -1,5 +1,6 @@
 import { Recurrence } from '@prisma/client';
-import { IsEnum, IsInt, IsOptional, IsString, Matches, MaxLength, Min, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -28,4 +29,11 @@ export class CreateChargeDto {
 
   @IsEnum(Recurrence)
   recurrence!: Recurrence;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(60)
+  recurrenceCount?: number;
 }

@@ -103,6 +103,9 @@ export interface Charge {
   receivedAt?: ISODate;
   notes?: string;
   recurrence: Recurrence;
+  recurrenceCount?: number;
+  recurrenceGroupId?: string;
+  recurrenceIndex?: number;
   createdAt: string;
 }
 
@@ -159,6 +162,7 @@ export interface IncomeInput {
   status: IncomeStatus;
   notes?: string;
   recurrence: Recurrence;
+  recurrenceCount?: number;
 }
 
 export interface ChargeInput {
@@ -168,6 +172,7 @@ export interface ChargeInput {
   dueDate: ISODate;
   notes?: string;
   recurrence: Recurrence;
+  recurrenceCount?: number;
 }
 
 export interface CategoryInput {

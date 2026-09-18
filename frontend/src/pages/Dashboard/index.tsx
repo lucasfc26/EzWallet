@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
-  ArrowUpRight,
   CalendarClock,
   CheckCircle2,
   HandCoins,
@@ -23,7 +22,7 @@ import { TransactionList } from "../../components/finance/TransactionList";
 import { CashflowChart, CategoryDonut } from "./Charts";
 import { ExpenseFormModal } from "../../components/finance/ExpenseFormModal";
 import { ChargeFormModal } from "../../components/finance/ChargeFormModal";
-import { IncomeFormModal } from "../../components/finance/IncomeFormModal";
+import { CatalogFilters } from "../../components/finance/CatalogFilters";
 import { useFinance } from "../../hooks/useFinance";
 import { useToast } from "../../hooks/useToast";
 import { buildPeriod, dueLabel, formatBR, isOverdue } from "../../lib/dates";
@@ -36,31 +35,69 @@ import {
   sortByDateDesc,
   upcomingBills,
 } from "../../lib/selectors";
+import { filterTransactions } from "../../lib/filters";
 import type { Period } from "../../types";
 import { cn } from "../../utils/cn";
 
+type CardFocus = "income" | "expenses" | "toReceive" | "toPay" | null;
+
 export default function DashboardPage() {
-  const { transactions, charges, categories, loading, setTransactionStatus } = useFinance();
+  const { transactions, charges, categories, cards, paymentOptions, loading, setTransactionStatus } =
+    useFinance();
   const { toast } = useToast();
   const [period, setPeriod] = useState<Period>(() => buildPeriod("month"));
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [chargeOpen, setChargeOpen] = useState(false);
-  const [incomeOpen, setIncomeOpen] = useState(false);
+  const [categoryId, setCategoryId] = useState("all");
+  const [payment, setPayment] = useState("all");
+  const [cardFocus, setCardFocus] = useState<CardFocus>(null);
+
+  const toggleFocus = (focus: Exclude<CardFocus, null>) => {
+    setCardFocus((current) => (current === focus ? null : focus));
+  };
+
+  const scopedTransactions = useMemo(
+    () => filterTransactions(transactions, categoryId, payment),
+    [transactions, categoryId, payment],
+  );
+  const scopedCharges = useMemo(
+    () => (categoryId === "all" && payment === "all" ? charges : []),
+    [charges, categoryId, payment],
+  );
 
   const summary = useMemo(
-    () => buildSummary(transactions, charges, period),
-    [transactions, charges, period],
+    () => buildSummary(scopedTransactions, scopedCharges, period),
+    [scopedTransactions, scopedCharges, period],
   );
-  const buckets = useMemo(() => buildBuckets(transactions, period), [transactions, period]);
+  const focusedTransactions = useMemo(() => {
+    if (cardFocus === "income" || cardFocus === "toReceive") {
+      return scopedTransactions.filter((t) => t.type === "income");
+    }
+    if (cardFocus === "expenses" || cardFocus === "toPay") {
+      return scopedTransactions.filter((t) => t.type === "expense");
+    }
+    return scopedTransactions;
+  }, [scopedTransactions, cardFocus]);
+  const buckets = useMemo(
+    () => buildBuckets(focusedTransactions, period),
+    [focusedTransactions, period],
+  );
+  const donutKind = cardFocus === "income" || cardFocus === "toReceive" ? "income" : "expense";
   const categorySlices = useMemo(
-    () => buildCategoryBreakdown(transactions, period, categories),
-    [transactions, period, categories],
+    () => buildCategoryBreakdown(focusedTransactions, period, categories, donutKind),
+    [focusedTransactions, period, categories, donutKind],
   );
   const recent = useMemo(
-    () => sortByDateDesc(inPeriod(transactions, period)).slice(0, 6),
-    [transactions, period],
+    () => sortByDateDesc(inPeriod(focusedTransactions, period)).slice(0, 6),
+    [focusedTransactions, period],
   );
-  const bills = useMemo(() => upcomingBills(transactions, 5), [transactions]);
+  const bills = useMemo(() => upcomingBills(focusedTransactions, 5), [focusedTransactions]);
+  const chartSeries =
+    cardFocus === "income" || cardFocus === "toReceive"
+      ? "receitas"
+      : cardFocus === "expenses" || cardFocus === "toPay"
+        ? "despesas"
+        : "both";
 
   const ratio = Math.min(100, percent(summary.expenses, summary.income));
 
@@ -90,16 +127,17 @@ export default function DashboardPage() {
         }
       />
 
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <PeriodFilter period={period} onChange={setPeriod} />
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<ArrowUpRight className="h-3.5 w-3.5" />}
-          onClick={() => setIncomeOpen(true)}
-        >
-          Registrar receita
-        </Button>
+        <CatalogFilters
+          categories={categories}
+          paymentOptions={paymentOptions}
+          cards={cards}
+          categoryId={categoryId}
+          payment={payment}
+          onCategoryChange={setCategoryId}
+          onPaymentChange={setPayment}
+        />
       </div>
 
       {loading ? (
@@ -123,6 +161,8 @@ export default function DashboardPage() {
               tone="green"
               icon={<TrendingUp className="h-3.5 w-3.5" />}
               hint="Recebidas no período"
+              selected={cardFocus === "income"}
+              onClick={() => toggleFocus("income")}
             />
             <SummaryCard
               label="Despesas"
@@ -130,13 +170,17 @@ export default function DashboardPage() {
               tone="red"
               icon={<TrendingDown className="h-3.5 w-3.5" />}
               hint={`${formatCents(summary.paidExpenses)} já pagos`}
+              selected={cardFocus === "expenses"}
+              onClick={() => toggleFocus("expenses")}
             />
             <SummaryCard
               label="A receber"
               value={summary.toReceive}
               tone="violet"
               icon={<HandCoins className="h-3.5 w-3.5" />}
-              hint="Cobranças pendentes"
+              hint="Receitas pendentes"
+              selected={cardFocus === "toReceive"}
+              onClick={() => toggleFocus("toReceive")}
             />
             <SummaryCard
               label="A pagar"
@@ -144,6 +188,8 @@ export default function DashboardPage() {
               tone="amber"
               icon={<CalendarClock className="h-3.5 w-3.5" />}
               hint="Contas do período"
+              selected={cardFocus === "toPay"}
+              onClick={() => toggleFocus("toPay")}
             />
           </div>
 
@@ -226,12 +272,12 @@ export default function DashboardPage() {
                 }
               />
               <CardBody className="pt-4">
-                <CashflowChart data={buckets} />
+                <CashflowChart data={buckets} series={chartSeries} />
               </CardBody>
             </Card>
 
             <Card className="lg:col-span-2">
-              <CardHeader title="Gastos por categoria" />
+              <CardHeader title={donutKind === "income" ? "Receitas por categoria" : "Gastos por categoria"} />
               <CardBody>
                 {categorySlices.length === 0 ? (
                   <EmptyState
@@ -350,7 +396,6 @@ export default function DashboardPage() {
 
       <ExpenseFormModal open={expenseOpen} onClose={() => setExpenseOpen(false)} />
       <ChargeFormModal open={chargeOpen} onClose={() => setChargeOpen(false)} />
-      <IncomeFormModal open={incomeOpen} onClose={() => setIncomeOpen(false)} />
     </>
   );
 }

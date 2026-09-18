@@ -41,7 +41,13 @@ function TooltipBox({
   );
 }
 
-export function CashflowChart({ data }: { data: BucketPoint[] }) {
+export function CashflowChart({
+  data,
+  series = "both",
+}: {
+  data: BucketPoint[];
+  series?: "both" | "receitas" | "despesas";
+}) {
   return (
     <div className="h-[230px] w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -64,8 +70,12 @@ export function CashflowChart({ data }: { data: BucketPoint[] }) {
             cursor={{ fill: "var(--color-surface-secondary)" }}
             content={<TooltipBox />}
           />
-          <Bar dataKey="receitas" fill="var(--color-chart-revenue)" radius={[4, 4, 0, 0]} maxBarSize={22} />
-          <Bar dataKey="despesas" fill="var(--color-chart-expense)" radius={[4, 4, 0, 0]} maxBarSize={22} />
+          {series !== "despesas" && (
+            <Bar dataKey="receitas" fill="var(--color-chart-revenue)" radius={[4, 4, 0, 0]} maxBarSize={22} />
+          )}
+          {series !== "receitas" && (
+            <Bar dataKey="despesas" fill="var(--color-chart-expense)" radius={[4, 4, 0, 0]} maxBarSize={22} />
+          )}
         </BarChart>
       </ResponsiveContainer>
     </div>

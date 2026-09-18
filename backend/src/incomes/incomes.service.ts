@@ -1,9 +1,10 @@
+import { randomUUID } from 'crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateIncomeDto } from './dto/create-income.dto';
 import { UpdateIncomeDto } from './dto/update-income.dto';
-import { parseISODate, toISODate } from '../common/date.util';
+import { addRecurrence, expandRecurrenceCount, parseISODate, toISODate } from '../common/date.util';
 import { requireCategory } from '../categories/categories.service';
 
 @Injectable()
@@ -15,20 +16,34 @@ export class IncomesService {
   }
 
   create(userId: string, dto: CreateIncomeDto) {
+    const { stored, expand } = expandRecurrenceCount(dto.recurrence, dto.recurrenceCount);
+    const groupId = expand > 1 ? randomUUID() : null;
+    const start = parseISODate(dto.date);
+
     return this.prisma.forUser(userId, async (tx) => {
       await requireCategory(tx, userId, dto.categoryId, 'income');
-      return tx.income.create({
-        data: {
-          userId,
-          description: dto.description,
-          amount: dto.amount,
-          date: parseISODate(dto.date),
-          categoryId: dto.categoryId,
-          status: dto.status,
-          notes: dto.notes,
-          recurrence: dto.recurrence,
-        },
-      });
+      const rows = [];
+      for (let i = 0; i < expand; i += 1) {
+        const date = i === 0 || dto.recurrence === 'none' ? start : addRecurrence(start, dto.recurrence, i);
+        rows.push(
+          await tx.income.create({
+            data: {
+              userId,
+              description: dto.description,
+              amount: dto.amount,
+              date,
+              categoryId: dto.categoryId,
+              status: i === 0 ? dto.status : 'pending',
+              notes: dto.notes,
+              recurrence: dto.recurrence,
+              recurrenceCount: stored,
+              recurrenceGroupId: groupId,
+              recurrenceIndex: i + 1,
+            },
+          }),
+        );
+      }
+      return rows;
     });
   }
 
@@ -47,6 +62,7 @@ export class IncomesService {
         categoryId: params.categoryId,
         status: 'received',
         recurrence: 'none',
+        recurrenceCount: 1,
         chargeId: params.chargeId,
       },
     });
@@ -65,6 +81,7 @@ export class IncomesService {
           status: dto.status,
           notes: dto.notes,
           recurrence: dto.recurrence,
+          recurrenceCount: dto.recurrenceCount,
         },
       });
     });
@@ -94,6 +111,9 @@ export function toIncomeResponse(row: {
   chargeId: string | null;
   notes: string | null;
   recurrence: string;
+  recurrenceCount?: number;
+  recurrenceGroupId?: string | null;
+  recurrenceIndex?: number;
   createdAt: Date;
 }) {
   return {
@@ -107,6 +127,9 @@ export function toIncomeResponse(row: {
     chargeId: row.chargeId ?? undefined,
     notes: row.notes ?? undefined,
     recurrence: row.recurrence,
+    recurrenceCount: row.recurrenceCount ?? 1,
+    recurrenceGroupId: row.recurrenceGroupId ?? undefined,
+    recurrenceIndex: row.recurrenceIndex ?? 1,
     createdAt: row.createdAt.toISOString(),
   };
 }

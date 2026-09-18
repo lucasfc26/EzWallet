@@ -103,12 +103,15 @@ export function buildCategoryBreakdown(
   transactions: Transaction[],
   period: Period,
   categories: Category[] = [],
+  kind: "expense" | "income" = "expense",
 ): CategorySlice[] {
-  const expenses = inPeriod(transactions, period).filter(isExpense);
-  const total = sum(expenses.map((e) => e.amount));
+  const scoped = inPeriod(transactions, period).filter((t) =>
+    kind === "income" ? isIncome(t) && t.status === "received" : isExpense(t),
+  );
+  const total = sum(scoped.map((item) => item.amount));
   const map = new Map<string, number>();
-  expenses.forEach((e) => {
-    map.set(e.categoryId, (map.get(e.categoryId) ?? 0) + e.amount);
+  scoped.forEach((item) => {
+    map.set(item.categoryId, (map.get(item.categoryId) ?? 0) + item.amount);
   });
   return [...map.entries()]
     .map(([id, value]) => {

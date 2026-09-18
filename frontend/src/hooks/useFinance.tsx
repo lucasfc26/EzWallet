@@ -95,7 +95,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const addIncome = useCallback(async (input: IncomeInput) => {
     const created = await financeService.createIncome(input);
-    setTransactions((prev) => [created, ...prev]);
+    setTransactions((prev) => [...created, ...prev]);
   }, []);
 
   const updateIncome = useCallback(async (id: string, input: IncomeInput) => {
@@ -149,8 +149,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           status: (source as Income).status,
           notes: source.notes,
           recurrence: source.recurrence,
+          recurrenceCount: source.recurrenceCount,
         });
-        setTransactions((prev) => [created, ...prev]);
+        setTransactions((prev) => [...created, ...prev]);
       }
     },
     [transactions],
@@ -158,7 +159,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const addCharge = useCallback(async (input: ChargeInput) => {
     const created = await financeService.createCharge(input);
-    setCharges((prev) => [created, ...prev]);
+    setCharges((prev) => [...created, ...prev]);
   }, []);
 
   const updateCharge = useCallback(async (id: string, input: ChargeInput) => {
@@ -169,6 +170,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const removeCharge = useCallback(async (id: string) => {
     await financeService.deleteCharge(id);
     setCharges((prev) => prev.filter((c) => c.id !== id));
+    setTransactions((prev) =>
+      prev.filter((t) => !(t.type === "income" && t.chargeId === id)),
+    );
   }, []);
 
   const settleCharge = useCallback(async (id: string) => {
@@ -193,8 +197,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         dueDate: source.dueDate,
         notes: source.notes,
         recurrence: source.recurrence,
+        recurrenceCount: source.recurrenceCount,
       });
-      setCharges((prev) => [created, ...prev]);
+      setCharges((prev) => [...created, ...prev]);
     },
     [charges],
   );

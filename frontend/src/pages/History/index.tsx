@@ -6,9 +6,11 @@ import { Card, CardBody } from "../../components/ui/Card";
 import { Tabs } from "../../components/ui/Tabs";
 import { EmptyState, LoadingState } from "../../components/ui/States";
 import { TransactionItem } from "../../components/finance/TransactionList";
+import { CatalogFilters } from "../../components/finance/CatalogFilters";
 import { useFinance } from "../../hooks/useFinance";
 import { buildPeriod, formatLongDay, periodLabel, relativeDayLabel } from "../../lib/dates";
 import { formatCents } from "../../lib/money";
+import { filterTransactions } from "../../lib/filters";
 import { buildSummary, groupByDay, inPeriod } from "../../lib/selectors";
 import type { Period, Transaction } from "../../types";
 import { cn } from "../../utils/cn";
@@ -19,7 +21,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "Tudo" },
   { value: "expenses", label: "Gastos" },
   { value: "incomes", label: "Receitas" },
-  { value: "charges", label: "Cobranças recebidas" },
+  { value: "charges", label: "Receitas recebidas" },
   { value: "paid", label: "Contas pagas" },
 ];
 
@@ -39,22 +41,29 @@ function matchFilter(t: Transaction, filter: Filter): boolean {
 }
 
 export default function HistoryPage() {
-  const { transactions, charges, loading } = useFinance();
+  const { transactions, charges, categories, cards, paymentOptions, loading } = useFinance();
   const [period, setPeriod] = useState<Period>(() => buildPeriod("month"));
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
+  const [categoryId, setCategoryId] = useState("all");
+  const [payment, setPayment] = useState("all");
+
+  const cataloged = useMemo(
+    () => filterTransactions(transactions, categoryId, payment),
+    [transactions, categoryId, payment],
+  );
 
   const scoped = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return inPeriod(transactions, period)
+    return inPeriod(cataloged, period)
       .filter((t) => matchFilter(t, filter))
       .filter((t) => (term ? t.description.toLowerCase().includes(term) : true));
-  }, [transactions, period, filter, query]);
+  }, [cataloged, period, filter, query]);
 
   const groups = useMemo(() => groupByDay(scoped), [scoped]);
   const summary = useMemo(
-    () => buildSummary(transactions, charges, period),
-    [transactions, charges, period],
+    () => buildSummary(cataloged, categoryId === "all" && payment === "all" ? charges : [], period),
+    [cataloged, charges, period, categoryId, payment],
   );
 
   return (
@@ -65,7 +74,18 @@ export default function HistoryPage() {
       />
 
       <div className="mb-4 flex flex-col gap-3">
-        <PeriodFilter period={period} onChange={setPeriod} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <PeriodFilter period={period} onChange={setPeriod} />
+          <CatalogFilters
+            categories={categories}
+            paymentOptions={paymentOptions}
+            cards={cards}
+            categoryId={categoryId}
+            payment={payment}
+            onCategoryChange={setCategoryId}
+            onPaymentChange={setPayment}
+          />
+        </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <Tabs paged items={FILTERS} value={filter} onChange={setFilter} size="sm" />
           <div className="relative sm:w-64">

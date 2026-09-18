@@ -26,7 +26,7 @@ import { buildPeriod } from "../lib/dates";
 const NAV = [
   { to: "/", label: "Visão geral", shortLabel: "Geral", icon: LayoutDashboard, end: true },
   { to: "/gastos", label: "Gastos", shortLabel: "Gastos", icon: Receipt, end: false },
-  { to: "/cobrancas", label: "Cobranças", shortLabel: "Cobranças", icon: HandCoins, end: false },
+  { to: "/cobrancas", label: "Receita", shortLabel: "Receita", icon: HandCoins, end: false },
   { to: "/historico", label: "Histórico", shortLabel: "Histórico", icon: ArrowDownCircle, end: false },
   { to: "/configuracoes", label: "Configurações", shortLabel: "Ajustes", icon: Settings, end: false },
 ];
