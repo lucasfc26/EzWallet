@@ -7,6 +7,7 @@ import { RegisterDto } from './dto/register.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from './types';
+import { UsersService } from '../users/users.service';
 
 const REFRESH_COOKIE = 'refresh_token';
 const REFRESH_COOKIE_PATH = '/api/auth';
@@ -15,6 +16,7 @@ const REFRESH_COOKIE_PATH = '/api/auth';
 export class AuthController {
   constructor(
     private readonly auth: AuthService,
+    private readonly users: UsersService,
     private readonly config: ConfigService,
   ) {}
 
@@ -56,8 +58,8 @@ export class AuthController {
   }
 
   @Get('me')
-  me(@CurrentUser() user: AuthenticatedUser) {
-    return { user };
+  async me(@CurrentUser() user: AuthenticatedUser) {
+    return { user: await this.users.getPublicProfile(user.id) };
   }
 
   private setRefreshCookie(res: Response, tokens: TokenPair) {

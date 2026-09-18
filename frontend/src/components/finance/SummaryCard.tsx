@@ -5,11 +5,11 @@ import { formatCents } from "../../lib/money";
 type Tone = "neutral" | "green" | "red" | "amber" | "violet";
 
 const toneStyles: Record<Tone, { chip: string; value: string }> = {
-  neutral: { chip: "bg-slate-100 text-slate-600", value: "text-slate-900" },
-  green: { chip: "bg-emerald-50 text-emerald-600", value: "text-emerald-600" },
-  red: { chip: "bg-rose-50 text-rose-600", value: "text-rose-600" },
-  amber: { chip: "bg-amber-50 text-amber-600", value: "text-amber-600" },
-  violet: { chip: "bg-violet-50 text-violet-600", value: "text-violet-600" },
+  neutral: { chip: "bg-surface-secondary text-foreground-secondary", value: "text-foreground" },
+  green: { chip: "bg-success-subtle text-success", value: "text-success" },
+  red: { chip: "bg-danger-subtle text-danger", value: "text-danger" },
+  amber: { chip: "bg-warning-subtle text-warning", value: "text-warning" },
+  violet: { chip: "bg-accent/10 text-accent", value: "text-accent" },
 };
 
 export function SummaryCard({
@@ -35,8 +35,8 @@ export function SummaryCard({
       className={cn(
         "rounded-2xl border p-4 transition-shadow hover:shadow-sm",
         highlight
-          ? "border-slate-900/10 bg-slate-900 text-white"
-          : "border-slate-200/80 bg-white",
+          ? "border-primary/20 bg-primary text-white"
+          : "border-border bg-surface",
         className,
       )}
     >
@@ -44,7 +44,7 @@ export function SummaryCard({
         <p
           className={cn(
             "text-[12px] font-medium",
-            highlight ? "text-slate-300" : "text-slate-500",
+            highlight ? "text-white/70" : "text-foreground-secondary",
           )}
         >
           {label}
@@ -70,7 +70,7 @@ export function SummaryCard({
         <p
           className={cn(
             "mt-1 text-[11.5px]",
-            highlight ? "text-slate-400" : "text-slate-400",
+            highlight ? "text-white/60" : "text-foreground-muted",
           )}
         >
           {hint}

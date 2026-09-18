@@ -5,7 +5,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-slate-200/80 bg-white",
+        "rounded-2xl border border-border bg-surface",
         className,
       )}
       {...props}
@@ -24,14 +24,14 @@ export function CardHeader({ title, description, action, className }: CardHeader
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4",
+        "flex items-start justify-between gap-3 border-b border-border px-5 py-4",
         className,
       )}
     >
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         {description && (
-          <p className="mt-0.5 text-xs text-slate-500">{description}</p>
+          <p className="mt-0.5 text-xs text-foreground-secondary">{description}</p>
         )}
       </div>
       {action}

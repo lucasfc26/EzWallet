@@ -67,14 +67,14 @@ export default function HistoryPage() {
       <div className="mb-4 flex flex-col gap-3">
         <PeriodFilter period={period} onChange={setPeriod} />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Tabs items={FILTERS} value={filter} onChange={setFilter} size="sm" />
+          <Tabs paged items={FILTERS} value={filter} onChange={setFilter} size="sm" />
           <div className="relative sm:w-64">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-foreground-muted" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Buscar movimentação..."
-              className="h-9 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-[13px] text-slate-700 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+              className="h-9 w-full rounded-xl border border-border bg-surface pl-9 pr-3 text-[13px] text-foreground-secondary placeholder:text-foreground-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
         </div>
@@ -83,23 +83,23 @@ export default function HistoryPage() {
       <Card className="mb-4">
         <CardBody className="grid grid-cols-3 gap-3 py-4">
           <div>
-            <p className="text-[12px] font-medium text-slate-500">Receitas</p>
-            <p className="mt-1 text-[17px] font-semibold tabular-nums text-emerald-600">
+            <p className="text-[12px] font-medium text-foreground-secondary">Receitas</p>
+            <p className="mt-1 text-[17px] font-semibold tabular-nums text-success">
               {formatCents(summary.income)}
             </p>
           </div>
           <div>
-            <p className="text-[12px] font-medium text-slate-500">Despesas</p>
-            <p className="mt-1 text-[17px] font-semibold tabular-nums text-rose-600">
+            <p className="text-[12px] font-medium text-foreground-secondary">Despesas</p>
+            <p className="mt-1 text-[17px] font-semibold tabular-nums text-danger">
               {formatCents(summary.expenses)}
             </p>
           </div>
           <div>
-            <p className="text-[12px] font-medium text-slate-500">Saldo do período</p>
+            <p className="text-[12px] font-medium text-foreground-secondary">Saldo do período</p>
             <p
               className={cn(
                 "mt-1 text-[17px] font-semibold tabular-nums",
-                summary.periodResult >= 0 ? "text-slate-900" : "text-rose-600",
+                summary.periodResult >= 0 ? "text-foreground" : "text-danger",
               )}
             >
               {formatCents(summary.periodResult)}
@@ -124,30 +124,30 @@ export default function HistoryPage() {
         <div className="space-y-4">
           {groups.map((group) => (
             <Card key={group.date} className="overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-2.5 sm:px-5">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface-secondary/60 px-4 py-2.5 sm:px-5">
                 <div className="flex items-baseline gap-2">
-                  <h3 className="text-[13.5px] font-semibold text-slate-900">
+                  <h3 className="text-[13.5px] font-semibold text-foreground">
                     {relativeDayLabel(group.date)}
                   </h3>
-                  <span className="text-[12px] text-slate-400">
+                  <span className="text-[12px] text-foreground-muted">
                     {formatLongDay(group.date)} • {group.items.length} movimentaç
                     {group.items.length === 1 ? "ão" : "ões"}
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-[12px] tabular-nums">
                   {group.incomeTotal > 0 && (
-                    <span className="font-medium text-emerald-600">
+                    <span className="font-medium text-success">
                       + {formatCents(group.incomeTotal)}
                     </span>
                   )}
                   {group.expenseTotal > 0 && (
-                    <span className="font-medium text-rose-600">
+                    <span className="font-medium text-danger">
                       − {formatCents(group.expenseTotal)}
                     </span>
                   )}
                 </div>
               </div>
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-border">
                 {group.items.map((t) => (
                   <li key={t.id}>
                     <TransactionItem transaction={t} />

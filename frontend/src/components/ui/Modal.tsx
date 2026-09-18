@@ -49,7 +49,7 @@ export function Modal({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div
-        className="absolute inset-0 bg-slate-900/30 backdrop-blur-[2px] animate-[fadeIn_.15s_ease-out]"
+        className="absolute inset-0 bg-foreground/30 backdrop-blur-[2px] animate-[fadeIn_.15s_ease-out] dark:bg-black/50"
         onClick={onClose}
       />
       <div
@@ -57,30 +57,30 @@ export function Modal({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl shadow-slate-900/10",
+          "relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-surface shadow-xl shadow-foreground/10 dark:shadow-black/40",
           "sm:rounded-2xl animate-[slideUp_.2s_ease-out]",
           sizes[size],
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+            <h2 className="text-base font-semibold text-foreground">{title}</h2>
             {description && (
-              <p className="mt-0.5 text-[13px] text-slate-500">{description}</p>
+              <p className="mt-0.5 text-[13px] text-foreground-secondary">{description}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50"
+            className="rounded-lg p-1.5 text-foreground-muted transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">{children}</div>
         {footer && (
-          <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-3.5">
+          <div className="border-t border-border bg-surface-secondary/60 px-5 py-3.5">
             {footer}
           </div>
         )}

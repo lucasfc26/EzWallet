@@ -47,9 +47,9 @@ export function DropdownMenu({
         aria-label={label}
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors",
-          "hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50",
-          open && "bg-slate-100 text-slate-700",
+          "inline-flex h-8 w-8 items-center justify-center rounded-lg text-foreground-muted transition-colors",
+          "hover:bg-surface-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+          open && "bg-surface-secondary text-foreground",
         )}
       >
         {trigger ?? <MoreHorizontal className="h-4 w-4" />}
@@ -57,7 +57,7 @@ export function DropdownMenu({
       {open && (
         <div
           className={cn(
-            "absolute z-40 mt-1 min-w-[190px] overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg shadow-slate-900/10",
+            "absolute z-40 mt-1 min-w-[190px] overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-lg shadow-foreground/10",
             align === "right" ? "right-0" : "left-0",
           )}
         >
@@ -72,8 +72,8 @@ export function DropdownMenu({
               className={cn(
                 "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium transition-colors",
                 item.destructive
-                  ? "text-rose-600 hover:bg-rose-50"
-                  : "text-slate-700 hover:bg-slate-50",
+                  ? "text-danger hover:bg-danger-subtle"
+                  : "text-foreground-secondary hover:bg-surface-secondary",
               )}
             >
               {item.icon}

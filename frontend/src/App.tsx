@@ -6,9 +6,11 @@ import ChargesPage from "./pages/Charges";
 import HistoryPage from "./pages/History";
 import LoginPage from "./pages/Login";
 import RegisterPage from "./pages/Register";
+import SettingsPage from "./pages/Settings";
 import { FinanceProvider } from "./hooks/useFinance";
 import { AuthProvider } from "./hooks/useAuth";
 import { ToastProvider } from "./hooks/useToast";
+import { ThemeProvider } from "./hooks/useTheme";
 import { Toaster } from "./components/ui/Toaster";
 import { RequireAuth } from "./components/RequireAuth";
 
@@ -29,6 +31,7 @@ const router = createHashRouter([
       { path: "gastos", element: <ExpensesPage /> },
       { path: "cobrancas", element: <ChargesPage /> },
       { path: "historico", element: <HistoryPage /> },
+      { path: "configuracoes", element: <SettingsPage /> },
       { path: "*", element: <DashboardPage /> },
     ],
   },
@@ -36,11 +39,13 @@ const router = createHashRouter([
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <RouterProvider router={router} />
-        <Toaster />
-      </AuthProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <RouterProvider router={router} />
+          <Toaster />
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }

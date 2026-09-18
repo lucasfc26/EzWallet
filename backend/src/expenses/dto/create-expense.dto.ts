@@ -1,6 +1,6 @@
 import { PaymentMethod, Recurrence, ExpenseStatus } from '@prisma/client';
-import { IsEnum, IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min, MinLength } from 'class-validator';
-import { EXPENSE_CATEGORY_IDS } from '../../common/constants/categories';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -10,6 +10,7 @@ export class CreateExpenseDto {
   @MaxLength(160)
   description!: string;
 
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   amount!: number;
@@ -17,11 +18,20 @@ export class CreateExpenseDto {
   @Matches(ISO_DATE, { message: 'date must be an ISO date (yyyy-MM-dd)' })
   date!: string;
 
-  @IsIn(EXPENSE_CATEGORY_IDS)
+  @IsUUID()
   categoryId!: string;
 
+  @IsOptional()
   @IsEnum(PaymentMethod)
-  paymentMethod!: PaymentMethod;
+  paymentMethod?: PaymentMethod;
+
+  @IsOptional()
+  @IsUUID()
+  paymentCardId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  paymentOptionId?: string;
 
   @IsEnum(ExpenseStatus)
   status!: ExpenseStatus;
@@ -33,4 +43,11 @@ export class CreateExpenseDto {
 
   @IsEnum(Recurrence)
   recurrence!: Recurrence;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(60)
+  recurrenceCount?: number;
 }

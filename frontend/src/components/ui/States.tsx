@@ -22,12 +22,12 @@ export function EmptyState({
         className,
       )}
     >
-      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-slate-50 text-slate-400 ring-1 ring-slate-100">
+      <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-surface-secondary text-foreground-muted ring-1 ring-border">
         {icon ?? <Inbox className="h-5 w-5" />}
       </div>
-      <p className="text-sm font-medium text-slate-900">{title}</p>
+      <p className="text-sm font-medium text-foreground">{title}</p>
       {description && (
-        <p className="mt-1 max-w-xs text-[13px] text-slate-500">{description}</p>
+        <p className="mt-1 max-w-xs text-[13px] text-foreground-secondary">{description}</p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>
@@ -36,7 +36,7 @@ export function EmptyState({
 
 export function LoadingState({ label = "Carregando..." }: { label?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-slate-400">
+    <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-foreground-muted">
       <Loader2 className="h-5 w-5 animate-spin" />
       <p className="text-[13px]">{label}</p>
     </div>
@@ -44,5 +44,5 @@ export function LoadingState({ label = "Carregando..." }: { label?: string }) {
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-lg bg-slate-100", className)} />;
+  return <div className={cn("animate-pulse rounded-lg bg-surface-secondary", className)} />;
 }

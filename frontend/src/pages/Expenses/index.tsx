@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ArrowDownUp,
   Check,
@@ -6,6 +7,7 @@ import {
   Pencil,
   Plus,
   Receipt,
+  Search,
   Trash2,
   Undo2,
 } from "lucide-react";
@@ -25,9 +27,8 @@ import { buildPeriod, formatBR, periodLabel } from "../../lib/dates";
 import { formatCents, sum } from "../../lib/money";
 import { inPeriod, isExpense } from "../../lib/selectors";
 import {
-  EXPENSE_CATEGORIES,
   getCategory,
-  getPaymentMethod,
+  paymentLabel,
   RECURRENCE_LABEL,
 } from "../../data/categories";
 import type { Expense, Period } from "../../types";
@@ -37,9 +38,11 @@ type SortKey = "date" | "amount";
 type StatusFilter = "all" | "paid" | "pending";
 
 export default function ExpensesPage() {
-  const { transactions, loading, removeTransaction, setTransactionStatus, duplicateTransaction } =
+  const { transactions, categories, cards, paymentOptions, loading, removeTransaction, setTransactionStatus, duplicateTransaction } =
     useFinance();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = searchParams.get("q") ?? "";
 
   const [period, setPeriod] = useState<Period>(() => buildPeriod("month"));
   const [category, setCategory] = useState<string>("all");
@@ -50,8 +53,15 @@ export default function ExpensesPage() {
   const [editing, setEditing] = useState<Expense | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
+  const searching = query.trim().length > 0;
+
   const expenses = useMemo(() => {
-    let list = inPeriod(transactions, period).filter(isExpense);
+    const base = searching
+      ? transactions.filter(isExpense).filter((e) =>
+          e.description.toLowerCase().includes(query.trim().toLowerCase()),
+        )
+      : inPeriod(transactions, period).filter(isExpense);
+    let list = base;
     if (category !== "all") list = list.filter((e) => e.categoryId === category);
     if (status !== "all") list = list.filter((e) => e.status === status);
     return [...list].sort((a, b) => {
@@ -61,7 +71,7 @@ export default function ExpensesPage() {
           : new Date(a.date).getTime() - new Date(b.date).getTime();
       return sortAsc ? diff : -diff;
     });
-  }, [transactions, period, category, status, sortKey, sortAsc]);
+  }, [transactions, period, category, status, sortKey, sortAsc, query, searching]);
 
   const total = sum(expenses.map((e) => e.amount));
   const pendingTotal = sum(
@@ -137,8 +147,8 @@ export default function ExpensesPage() {
         }
       }}
       className={cn(
-        "inline-flex items-center gap-1 transition-colors hover:text-slate-700",
-        sortKey === key && "text-slate-900",
+        "inline-flex items-center gap-1 transition-colors hover:text-foreground-secondary",
+        sortKey === key && "text-foreground",
       )}
     >
       {label}
@@ -150,7 +160,11 @@ export default function ExpensesPage() {
     <>
       <PageHeader
         title="Gastos"
-        subtitle={`${periodLabel(period)} • ${expenses.length} lançamento${expenses.length === 1 ? "" : "s"}`}
+        subtitle={
+          searching
+            ? `Todos os meses • ${expenses.length} resultado${expenses.length === 1 ? "" : "s"} para “${query.trim()}”`
+            : `${periodLabel(period)} • ${expenses.length} lançamento${expenses.length === 1 ? "" : "s"}`
+        }
         actions={
           <Button icon={<Plus className="h-4 w-4" />} onClick={openNew}>
             Adicionar gasto
@@ -160,35 +174,51 @@ export default function ExpensesPage() {
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <Card className="p-4">
-          <p className="text-[12px] font-medium text-slate-500">Total no período</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-slate-900">
+          <p className="text-[12px] font-medium text-foreground-secondary">Total no período</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
             {formatCents(total)}
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-[12px] font-medium text-slate-500">Pendentes</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-amber-600">
+          <p className="text-[12px] font-medium text-foreground-secondary">Pendentes</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-warning">
             {formatCents(pendingTotal)}
           </p>
         </Card>
         <Card className="p-4">
-          <p className="text-[12px] font-medium text-slate-500">Média por lançamento</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-slate-900">
+          <p className="text-[12px] font-medium text-foreground-secondary">Média por lançamento</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
             {formatCents(expenses.length ? Math.round(total / expenses.length) : 0)}
           </p>
         </Card>
       </div>
 
       <div className="mb-4 flex flex-col gap-3">
-        <PeriodFilter period={period} onChange={setPeriod} />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next) setSearchParams({ q: next });
+              else setSearchParams({});
+            }}
+            placeholder="Buscar gasto pelo nome, em todos os meses..."
+            className="h-11 w-full rounded-xl border border-border bg-surface pl-10 pr-3 text-[13.5px] text-foreground placeholder:text-foreground-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+        {!searching && <PeriodFilter period={period} onChange={setPeriod} />}
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-[12.5px] font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+            className="h-9 rounded-xl border border-border bg-surface px-3 text-[12.5px] font-medium text-foreground-secondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <option value="all">Todas as categorias</option>
-            {EXPENSE_CATEGORIES.map((c) => (
+            {categories
+              .filter((c) => c.kind === "expense")
+              .map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
@@ -197,7 +227,7 @@ export default function ExpensesPage() {
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusFilter)}
-            className="h-9 rounded-xl border border-slate-200 bg-white px-3 text-[12.5px] font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+            className="h-9 rounded-xl border border-border bg-surface px-3 text-[12.5px] font-medium text-foreground-secondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <option value="all">Todos os status</option>
             <option value="paid">Pagos</option>
@@ -224,8 +254,12 @@ export default function ExpensesPage() {
         ) : expenses.length === 0 ? (
           <EmptyState
             icon={<Receipt className="h-5 w-5" />}
-            title="Nenhum gasto encontrado neste período"
-            description="Ajuste os filtros ou adicione um novo lançamento."
+            title={searching ? "Nenhum gasto encontrado" : "Nenhum gasto encontrado neste período"}
+            description={
+              searching
+                ? "Tente outro nome. A busca percorre todos os meses, do mais recente para trás."
+                : "Ajuste os filtros ou adicione um novo lançamento."
+            }
             action={
               <Button size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={openNew}>
                 Adicionar gasto
@@ -238,7 +272,7 @@ export default function ExpensesPage() {
             <div className="hidden lg:block">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-slate-100 text-left text-[11.5px] font-medium uppercase tracking-wide text-slate-500 [&>th]:bg-slate-50/60">
+                  <tr className="border-b border-border text-left text-[11.5px] font-medium uppercase tracking-wide text-foreground-secondary [&>th]:bg-surface-secondary/60">
                     <th className="rounded-tl-2xl px-5 py-3">Descrição</th>
                     <th className="px-3 py-3">Categoria</th>
                     <th className="px-3 py-3">{sortButton("date", "Data")}</th>
@@ -248,34 +282,36 @@ export default function ExpensesPage() {
                     <th className="rounded-tr-2xl px-3 py-3" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {expenses.map((e) => (
-                    <tr key={e.id} className="group transition-colors hover:bg-slate-50/70">
+                    <tr key={e.id} className="group transition-colors hover:bg-surface-secondary/70">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <CategoryIcon categoryId={e.categoryId} size="sm" />
                           <div className="min-w-0">
-                            <p className="truncate text-[13.5px] font-medium text-slate-900">
+                            <p className="truncate text-[13.5px] font-medium text-foreground">
                               {e.description}
                             </p>
                             {e.recurrence !== "none" && (
-                              <p className="text-[11.5px] text-slate-400">
+                              <p className="text-[11.5px] text-foreground-muted">
                                 {RECURRENCE_LABEL[e.recurrence]}
+                                {(e.recurrenceCount ?? 1) > 1 &&
+                                  ` · ${e.recurrenceIndex ?? 1}/${e.recurrenceCount}`}
                               </p>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-[12.5px] text-slate-600">
-                        {getCategory(e.categoryId).name}
+                      <td className="px-3 py-3 text-[12.5px] text-foreground-secondary">
+                        {getCategory(e.categoryId, categories).name}
                       </td>
-                      <td className="px-3 py-3 text-[12.5px] tabular-nums text-slate-600">
+                      <td className="px-3 py-3 text-[12.5px] tabular-nums text-foreground-secondary">
                         {formatBR(e.date)}
                       </td>
-                      <td className="px-3 py-3 text-[12.5px] text-slate-600">
-                        {getPaymentMethod(e.paymentMethod).label}
+                      <td className="px-3 py-3 text-[12.5px] text-foreground-secondary">
+                        {paymentLabel(e.paymentMethod, e.paymentCardId, cards, e.paymentOptionId, paymentOptions)}
                       </td>
-                      <td className="px-3 py-3 text-right text-[13.5px] font-semibold tabular-nums text-slate-900">
+                      <td className="px-3 py-3 text-right text-[13.5px] font-semibold tabular-nums text-foreground">
                         {formatCents(e.amount)}
                       </td>
                       <td className="px-3 py-3">
@@ -297,25 +333,25 @@ export default function ExpensesPage() {
             </div>
 
             {/* Mobile cards */}
-            <ul className="divide-y divide-slate-100 lg:hidden">
+            <ul className="divide-y divide-border lg:hidden">
               {expenses.map((e) => (
                 <li key={e.id} className="flex items-start gap-3 px-4 py-3.5">
                   <CategoryIcon categoryId={e.categoryId} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="truncate text-[13.5px] font-medium text-slate-900">
+                      <p className="truncate text-[13.5px] font-medium text-foreground">
                         {e.description}
                       </p>
-                      <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-slate-900">
+                      <span className="shrink-0 text-[13.5px] font-semibold tabular-nums text-foreground">
                         {formatCents(e.amount)}
                       </span>
                     </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-slate-500">
-                      <span>{getCategory(e.categoryId).name}</span>
-                      <span className="text-slate-300">•</span>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-foreground-secondary">
+                      <span>{getCategory(e.categoryId, categories).name}</span>
+                      <span className="text-foreground-muted">•</span>
                       <span>{formatBR(e.date)}</span>
-                      <span className="text-slate-300">•</span>
-                      <span>{getPaymentMethod(e.paymentMethod).label}</span>
+                      <span className="text-foreground-muted">•</span>
+                      <span>{paymentLabel(e.paymentMethod, e.paymentCardId, cards, e.paymentOptionId, paymentOptions)}</span>
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       {e.status === "paid" ? (

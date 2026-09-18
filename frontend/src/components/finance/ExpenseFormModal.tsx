@@ -7,11 +7,19 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Input, Select, Textarea, DatePicker } from "../ui/Field";
 import { CurrencyInput } from "../ui/CurrencyInput";
-import { EXPENSE_CATEGORIES, PAYMENT_METHODS, RECURRENCE_OPTIONS } from "../../data/categories";
-import { todayISO } from "../../lib/dates";
+import {
+  decodePaymentValue,
+  encodePaymentValue,
+  paymentSelectOptions,
+  RECURRENCE_COUNTS,
+  RECURRENCE_OPTIONS,
+} from "../../data/categories";
+import { buildPeriod, isInPeriod, todayISO } from "../../lib/dates";
 import { useFinance } from "../../hooks/useFinance";
+import { useAuth } from "../../hooks/useAuth";
 import { useToast } from "../../hooks/useToast";
-import type { Expense, ExpenseInput, PaymentMethodId } from "../../types";
+import { monthlyExpenseTotal, spendCapLevel, spendCapMessage } from "../../lib/spendCap";
+import type { Expense, ExpenseInput } from "../../types";
 import { cn } from "../../utils/cn";
 
 const schema = z.object({
@@ -22,10 +30,11 @@ const schema = z.object({
   amount: z.number().int().positive("Informe um valor maior que zero"),
   date: z.string().min(1, "Selecione a data"),
   categoryId: z.string().min(1, "Selecione a categoria"),
-  paymentMethod: z.string().min(1, "Selecione a forma de pagamento"),
+  payment: z.string().min(1, "Selecione a forma de pagamento"),
   status: z.enum(["paid", "pending"]),
   notes: z.string().max(240, "Máximo de 240 caracteres").optional(),
   recurrence: z.enum(["none", "weekly", "monthly", "yearly"]),
+  recurrenceCount: z.string(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -34,11 +43,12 @@ const emptyValues: FormValues = {
   description: "",
   amount: 0,
   date: todayISO(),
-  categoryId: "alimentacao",
-  paymentMethod: "pix",
+  categoryId: "",
+  payment: "pix",
   status: "paid",
   notes: "",
   recurrence: "none",
+  recurrenceCount: "1",
 };
 
 export function ExpenseFormModal({
@@ -52,7 +62,8 @@ export function ExpenseFormModal({
   expense?: Expense | null;
   defaultDate?: string;
 }) {
-  const { addExpense, updateExpense } = useFinance();
+  const { addExpense, updateExpense, categories, cards, paymentOptions, transactions } = useFinance();
+  const { user } = useAuth();
   const { toast } = useToast();
   const descriptionRef = useRef<HTMLInputElement | null>(null);
   const keepOpen = useRef(false);
@@ -70,6 +81,14 @@ export function ExpenseFormModal({
     defaultValues: emptyValues,
   });
 
+  const expenseCategories = categories.filter((c) => c.kind === "expense");
+  const paymentChoices = paymentSelectOptions(paymentOptions, cards);
+  const defaultCategoryId =
+    (user?.defaultCategoryId && expenseCategories.some((c) => c.id === user.defaultCategoryId)
+      ? user.defaultCategoryId
+      : expenseCategories[0]?.id) ?? "";
+  const defaultPayment = resolveDefaultPayment(user, paymentOptions, cards, paymentChoices);
+
   useEffect(() => {
     if (!open) return;
     reset(
@@ -79,29 +98,50 @@ export function ExpenseFormModal({
             amount: expense.amount,
             date: expense.date,
             categoryId: expense.categoryId,
-            paymentMethod: expense.paymentMethod,
+            payment: encodePaymentValue({
+              paymentMethod: expense.paymentMethod,
+              paymentCardId: expense.paymentCardId,
+              paymentOptionId: expense.paymentOptionId,
+            }),
             status: expense.status,
             notes: expense.notes ?? "",
             recurrence: expense.recurrence,
+            recurrenceCount: String(expense.recurrenceCount ?? 1),
           }
-        : { ...emptyValues, date: defaultDate ?? todayISO() },
+        : {
+            ...emptyValues,
+            date: defaultDate ?? todayISO(),
+            categoryId: defaultCategoryId,
+            payment: defaultPayment,
+          },
     );
     const timer = setTimeout(() => descriptionRef.current?.focus(), 80);
     return () => clearTimeout(timer);
-  }, [open, expense, defaultDate, reset]);
+  }, [open, expense, defaultDate, reset, defaultCategoryId, defaultPayment]);
 
   const status = watch("status");
+  const recurrence = watch("recurrence");
 
   const onSubmit = handleSubmit(async (values) => {
+    const decoded = decodePaymentValue(values.payment);
+    const card = decoded.paymentCardId
+      ? cards.find((c) => c.id === decoded.paymentCardId)
+      : undefined;
+    const option = decoded.paymentOptionId
+      ? paymentOptions.find((o) => o.id === decoded.paymentOptionId)
+      : undefined;
     const payload: ExpenseInput = {
       description: values.description.trim(),
       amount: values.amount,
       date: values.date,
       categoryId: values.categoryId,
-      paymentMethod: values.paymentMethod as PaymentMethodId,
+      paymentMethod: card?.kind ?? option?.method ?? decoded.paymentMethod,
+      paymentCardId: card?.id,
+      paymentOptionId: card ? undefined : option?.id,
       status: values.status,
       notes: values.notes?.trim() || undefined,
       recurrence: values.recurrence,
+      recurrenceCount: values.recurrence === "none" ? 1 : Number(values.recurrenceCount) || 1,
     };
 
     try {
@@ -114,11 +154,21 @@ export function ExpenseFormModal({
         return;
       }
       await addExpense(payload);
-      toast("Gasto adicionado com sucesso.", {
-        description: `${payload.description} lançado.`,
+      const times = payload.recurrence !== "none" ? payload.recurrenceCount ?? 1 : 1;
+      toast(times > 1 ? `${times} lançamentos criados.` : "Gasto adicionado com sucesso.", {
+        description:
+          times > 1
+            ? `${payload.description} será repetido ${times} vezes.`
+            : `${payload.description} lançado.`,
       });
+      maybeWarnSpendCap(transactions, user?.monthlySpendCap, payload.date, payload.amount, toast);
       if (keepOpen.current) {
-        reset({ ...emptyValues, date: values.date, categoryId: values.categoryId });
+        reset({
+          ...emptyValues,
+          date: values.date,
+          categoryId: values.categoryId,
+          payment: values.payment,
+        });
         descriptionRef.current?.focus();
       } else {
         onClose();
@@ -213,26 +263,26 @@ export function ExpenseFormModal({
           <Select
             id="categoryId"
             label="Categoria"
-            options={EXPENSE_CATEGORIES.map((c) => ({ value: c.id, label: c.name }))}
+            options={expenseCategories.map((c) => ({ value: c.id, label: c.name }))}
             error={errors.categoryId?.message}
             {...register("categoryId")}
           />
           <Select
-            id="paymentMethod"
+            id="payment"
             label="Forma de pagamento"
-            options={PAYMENT_METHODS.map((p) => ({ value: p.id, label: p.label }))}
-            error={errors.paymentMethod?.message}
-            {...register("paymentMethod")}
+            options={paymentChoices}
+            error={errors.payment?.message}
+            {...register("payment")}
           />
         </div>
 
         <div className="space-y-1.5">
-          <span className="block text-[13px] font-medium text-slate-700">Status</span>
+          <span className="block text-[13px] font-medium text-foreground-secondary">Status</span>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
-                { value: "paid", label: "Pago", tone: "emerald" },
-                { value: "pending", label: "Pendente", tone: "amber" },
+                { value: "paid", label: "Pago", tone: "success" },
+                { value: "pending", label: "Pendente", tone: "warning" },
               ] as const
             ).map((opt) => (
               <button
@@ -240,12 +290,12 @@ export function ExpenseFormModal({
                 type="button"
                 onClick={() => setValue("status", opt.value, { shouldDirty: true })}
                 className={cn(
-                  "rounded-xl border px-3 py-2 text-[13px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50",
+                  "rounded-xl border px-3 py-2 text-[13px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                   status === opt.value
-                    ? opt.tone === "emerald"
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                      : "border-amber-300 bg-amber-50 text-amber-700"
-                    : "border-slate-200 bg-white text-slate-500 hover:border-slate-300",
+                    ? opt.tone === "success"
+                      ? "border-success/40 bg-success-subtle text-success"
+                      : "border-warning/40 bg-warning-subtle text-warning"
+                    : "border-border bg-surface text-foreground-secondary hover:border-foreground-muted",
                 )}
               >
                 {opt.label}
@@ -254,12 +304,22 @@ export function ExpenseFormModal({
           </div>
         </div>
 
-        <Select
-          id="recurrence"
-          label="Recorrência"
-          options={RECURRENCE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
-          {...register("recurrence")}
-        />
+        <div className={cn("grid gap-4", recurrence !== "none" && !expense && "sm:grid-cols-2")}>
+          <Select
+            id="recurrence"
+            label="Recorrência"
+            options={RECURRENCE_OPTIONS.map((r) => ({ value: r.value, label: r.label }))}
+            {...register("recurrence")}
+          />
+          {recurrence !== "none" && !expense && (
+            <Select
+              id="recurrenceCount"
+              label="Repetir"
+              options={RECURRENCE_COUNTS}
+              {...register("recurrenceCount")}
+            />
+          )}
+        </div>
 
         <Textarea
           id="notes"
@@ -271,4 +331,39 @@ export function ExpenseFormModal({
       </form>
     </Modal>
   );
+}
+
+function resolveDefaultPayment(
+  user: { defaultPaymentCardId?: string | null; defaultPaymentOptionId?: string | null } | null | undefined,
+  paymentOptions: { id: string }[],
+  cards: { id: string }[],
+  paymentChoices: { value: string }[],
+): string {
+  if (user?.defaultPaymentCardId && cards.some((c) => c.id === user.defaultPaymentCardId)) {
+    return `card:${user.defaultPaymentCardId}`;
+  }
+  if (user?.defaultPaymentOptionId && paymentOptions.some((o) => o.id === user.defaultPaymentOptionId)) {
+    return `opt:${user.defaultPaymentOptionId}`;
+  }
+  return paymentChoices[0]?.value ?? "pix";
+}
+
+function maybeWarnSpendCap(
+  transactions: Parameters<typeof monthlyExpenseTotal>[0],
+  cap: number | null | undefined,
+  date: string,
+  amount: number,
+  toast: (title: string, options?: { description?: string; variant?: "success" | "error" | "info" }) => void,
+) {
+  if (!cap || cap <= 0) return;
+  const month = buildPeriod("month");
+  const extra = isInPeriod(date, month) ? amount : 0;
+  if (!extra) return;
+  const before = monthlyExpenseTotal(transactions);
+  const after = before + extra;
+  const prev = spendCapLevel(before, cap);
+  const next = spendCapLevel(after, cap);
+  if (next === "ok" || next === prev) return;
+  const message = spendCapMessage(after, cap, next);
+  toast(message.title, { description: message.description, variant: "info" });
 }

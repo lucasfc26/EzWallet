@@ -3,7 +3,8 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { UserPlus, Wallet } from "lucide-react";
+import { UserPlus } from "lucide-react";
+import { BrandLogo } from "../../components/BrandLogo";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Field";
 import { Button } from "../../components/ui/Button";
@@ -41,14 +42,10 @@ export default function RegisterPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-white">
-            <Wallet className="h-5 w-5" />
-          </span>
-          <p className="text-lg font-semibold text-slate-900">Vérti</p>
-          <p className="text-sm text-slate-500">Crie sua conta</p>
+        <div className="mb-6">
+          <BrandLogo size="lg" layout="stack" subtitle="Crie sua conta" />
         </div>
 
         <Card className="shadow-sm">
@@ -82,7 +79,7 @@ export default function RegisterPage() {
               />
 
               {formError && (
-                <p className="rounded-lg bg-rose-50 px-3 py-2 text-[13px] font-medium text-rose-600">
+                <p className="rounded-lg bg-danger-subtle px-3 py-2 text-[13px] font-medium text-danger">
                   {formError}
                 </p>
               )}
@@ -99,9 +96,9 @@ export default function RegisterPage() {
           </CardBody>
         </Card>
 
-        <p className="mt-4 text-center text-[13px] text-slate-500">
+        <p className="mt-4 text-center text-[13px] text-foreground-secondary">
           Já tem uma conta?{" "}
-          <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-700">
+          <Link to="/login" className="font-medium text-primary hover:text-primary-hover">
             Entrar
           </Link>
         </p>

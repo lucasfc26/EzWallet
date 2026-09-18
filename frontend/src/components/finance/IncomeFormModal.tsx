@@ -7,7 +7,7 @@ import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Input, Select, Textarea, DatePicker } from "../ui/Field";
 import { CurrencyInput } from "../ui/CurrencyInput";
-import { INCOME_CATEGORIES, RECURRENCE_OPTIONS } from "../../data/categories";
+import { RECURRENCE_OPTIONS } from "../../data/categories";
 import { todayISO } from "../../lib/dates";
 import { useFinance } from "../../hooks/useFinance";
 import { useToast } from "../../hooks/useToast";
@@ -29,7 +29,7 @@ const emptyValues: FormValues = {
   description: "",
   amount: 0,
   date: todayISO(),
-  categoryId: "salario",
+  categoryId: "",
   status: "received",
   notes: "",
   recurrence: "none",
@@ -44,9 +44,11 @@ export function IncomeFormModal({
   onClose: () => void;
   income?: Income | null;
 }) {
-  const { addIncome, updateIncome } = useFinance();
+  const { addIncome, updateIncome, categories } = useFinance();
   const { toast } = useToast();
   const descriptionRef = useRef<HTMLInputElement | null>(null);
+  const incomeCategories = categories.filter((c) => c.kind === "income" && c.slug !== "cobrancas");
+  const defaultCategoryId = incomeCategories[0]?.id ?? "";
 
   const {
     register,
@@ -72,11 +74,11 @@ export function IncomeFormModal({
             notes: income.notes ?? "",
             recurrence: income.recurrence,
           }
-        : emptyValues,
+        : { ...emptyValues, categoryId: defaultCategoryId },
     );
     const timer = setTimeout(() => descriptionRef.current?.focus(), 80);
     return () => clearTimeout(timer);
-  }, [open, income, reset]);
+  }, [open, income, reset, defaultCategoryId]);
 
   const onSubmit = handleSubmit(async (values) => {
     const payload: IncomeInput = {
@@ -165,7 +167,7 @@ export function IncomeFormModal({
           <Select
             id="income-category"
             label="Origem"
-            options={INCOME_CATEGORIES.filter((c) => c.id !== "cobrancas").map((c) => ({
+            options={incomeCategories.map((c) => ({
               value: c.id,
               label: c.name,
             }))}

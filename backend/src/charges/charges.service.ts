@@ -77,11 +77,19 @@ export class ChargesService {
         data: { status: 'received', receivedAt: receivedDate },
       });
 
+      const chargeCategory = await tx.category.findFirst({
+        where: { userId, slug: 'cobrancas', kind: 'income' },
+      });
+      if (!chargeCategory) {
+        throw new BadRequestException('Categoria de cobranças não encontrada. Recrie-a em Configurações.');
+      }
+
       const income = await this.incomes.createFromCharge(tx, userId, {
         chargeId: charge.id,
         description: `${charge.clientName} — ${charge.description}`,
         amount: charge.amount,
         date: receivedDate,
+        categoryId: chargeCategory.id,
       });
 
       return { charge: updated, income };

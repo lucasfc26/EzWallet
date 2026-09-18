@@ -40,7 +40,7 @@ import type { Period } from "../../types";
 import { cn } from "../../utils/cn";
 
 export default function DashboardPage() {
-  const { transactions, charges, loading, setTransactionStatus } = useFinance();
+  const { transactions, charges, categories, loading, setTransactionStatus } = useFinance();
   const { toast } = useToast();
   const [period, setPeriod] = useState<Period>(() => buildPeriod("month"));
   const [expenseOpen, setExpenseOpen] = useState(false);
@@ -52,9 +52,9 @@ export default function DashboardPage() {
     [transactions, charges, period],
   );
   const buckets = useMemo(() => buildBuckets(transactions, period), [transactions, period]);
-  const categories = useMemo(
-    () => buildCategoryBreakdown(transactions, period),
-    [transactions, period],
+  const categorySlices = useMemo(
+    () => buildCategoryBreakdown(transactions, period, categories),
+    [transactions, period, categories],
   );
   const recent = useMemo(
     () => sortByDateDesc(inPeriod(transactions, period)).slice(0, 6),
@@ -81,7 +81,7 @@ export default function DashboardPage() {
               icon={<HandCoins className="h-4 w-4" />}
               onClick={() => setChargeOpen(true)}
             >
-              Nova cobrança
+              Nova receita
             </Button>
             <Button icon={<Plus className="h-4 w-4" />} onClick={() => setExpenseOpen(true)}>
               Novo gasto
@@ -151,53 +151,53 @@ export default function DashboardPage() {
           <Card>
             <CardBody className="grid gap-5 sm:grid-cols-3">
               <div>
-                <p className="text-[12px] font-medium text-slate-500">
+                <p className="text-[12px] font-medium text-foreground-secondary">
                   Receitas x despesas
                 </p>
                 <div className="mt-2 flex items-baseline gap-2">
-                  <span className="text-lg font-semibold tabular-nums text-emerald-600">
+                  <span className="text-lg font-semibold tabular-nums text-success">
                     {formatCents(summary.income)}
                   </span>
-                  <span className="text-xs text-slate-400">vs</span>
-                  <span className="text-lg font-semibold tabular-nums text-rose-600">
+                  <span className="text-xs text-foreground-muted">vs</span>
+                  <span className="text-lg font-semibold tabular-nums text-danger">
                     {formatCents(summary.expenses)}
                   </span>
                 </div>
-                <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-secondary">
                   <div
                     className={cn(
                       "h-full rounded-full transition-all",
-                      ratio > 90 ? "bg-rose-500" : ratio > 70 ? "bg-amber-500" : "bg-emerald-500",
+                      ratio > 90 ? "bg-danger" : ratio > 70 ? "bg-warning" : "bg-success",
                     )}
                     style={{ width: `${ratio}%` }}
                   />
                 </div>
               </div>
               <div>
-                <p className="text-[12px] font-medium text-slate-500">
+                <p className="text-[12px] font-medium text-foreground-secondary">
                   Resultado do período
                 </p>
                 <p
                   className={cn(
                     "mt-2 text-lg font-semibold tabular-nums",
-                    summary.periodResult >= 0 ? "text-emerald-600" : "text-rose-600",
+                    summary.periodResult >= 0 ? "text-success" : "text-danger",
                   )}
                 >
                   {summary.periodResult >= 0 ? "+" : "−"}{" "}
                   {formatCents(Math.abs(summary.periodResult))}
                 </p>
-                <p className="mt-2.5 text-[12px] text-slate-400">
+                <p className="mt-2.5 text-[12px] text-foreground-muted">
                   Saldo acumulado de {formatCents(summary.balance)}
                 </p>
               </div>
               <div>
-                <p className="text-[12px] font-medium text-slate-500">
+                <p className="text-[12px] font-medium text-foreground-secondary">
                   Gastos sobre receitas
                 </p>
-                <p className="mt-2 text-lg font-semibold tabular-nums text-slate-900">
+                <p className="mt-2 text-lg font-semibold tabular-nums text-foreground">
                   {percent(summary.expenses, summary.income)}%
                 </p>
-                <p className="mt-2.5 text-[12px] text-slate-400">
+                <p className="mt-2.5 text-[12px] text-foreground-muted">
                   {summary.income === 0
                     ? "Sem receitas registradas no período"
                     : ratio > 90
@@ -215,12 +215,12 @@ export default function DashboardPage() {
                 title="Receitas e despesas"
                 description="Comparativo por período"
                 action={
-                  <div className="flex items-center gap-3 text-[11.5px] text-slate-500">
+                  <div className="flex items-center gap-3 text-[11.5px] text-foreground-secondary">
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" /> Receitas
+                      <span className="h-2 w-2 rounded-full bg-chart-revenue" /> Receitas
                     </span>
                     <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-rose-500" /> Despesas
+                      <span className="h-2 w-2 rounded-full bg-chart-expense" /> Despesas
                     </span>
                   </div>
                 }
@@ -233,26 +233,26 @@ export default function DashboardPage() {
             <Card className="lg:col-span-2">
               <CardHeader title="Gastos por categoria" />
               <CardBody>
-                {categories.length === 0 ? (
+                {categorySlices.length === 0 ? (
                   <EmptyState
                     title="Nenhum gasto no período"
                     description="Adicione gastos para visualizar a distribuição."
                   />
                 ) : (
                   <>
-                    <CategoryDonut data={categories} />
+                    <CategoryDonut data={categorySlices} />
                     <ul className="mt-3 space-y-2">
-                      {categories.slice(0, 4).map((c) => (
+                      {categorySlices.slice(0, 4).map((c) => (
                         <li key={c.id} className="flex items-center gap-2 text-[12.5px]">
                           <span
                             className="h-2 w-2 shrink-0 rounded-full"
                             style={{ backgroundColor: c.color }}
                           />
-                          <span className="flex-1 truncate text-slate-600">{c.name}</span>
-                          <span className="tabular-nums font-medium text-slate-900">
+                          <span className="flex-1 truncate text-foreground-secondary">{c.name}</span>
+                          <span className="tabular-nums font-medium text-foreground">
                             {formatCents(c.value)}
                           </span>
-                          <span className="w-9 text-right tabular-nums text-slate-400">
+                          <span className="w-9 text-right tabular-nums text-foreground-muted">
                             {Math.round(c.share)}%
                           </span>
                         </li>
@@ -273,7 +273,7 @@ export default function DashboardPage() {
                 action={
                   <Link
                     to="/historico"
-                    className="inline-flex items-center gap-1 text-[12.5px] font-medium text-indigo-600 hover:text-indigo-700"
+                    className="inline-flex items-center gap-1 text-[12.5px] font-medium text-primary hover:text-primary-hover"
                   >
                     Ver histórico completo
                     <ArrowRight className="h-3.5 w-3.5" />
@@ -309,7 +309,7 @@ export default function DashboardPage() {
                   description="Tudo em dia por aqui."
                 />
               ) : (
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-border">
                   {bills.map((bill) => {
                     const due = bill.dueDate ?? bill.date;
                     const late = isOverdue(due);
@@ -319,21 +319,21 @@ export default function DashboardPage() {
                         className="flex items-center gap-3 px-5 py-3"
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13.5px] font-medium text-slate-900">
+                          <p className="truncate text-[13.5px] font-medium text-foreground">
                             {bill.description}
                           </p>
-                          <div className="mt-0.5 flex items-center gap-2 text-[12px] text-slate-500">
+                          <div className="mt-0.5 flex items-center gap-2 text-[12px] text-foreground-secondary">
                             <span>{formatBR(due)}</span>
                             <Badge tone={late ? "red" : "amber"}>{dueLabel(due)}</Badge>
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                          <span className="text-[13.5px] font-semibold tabular-nums text-slate-900">
+                          <span className="text-[13.5px] font-semibold tabular-nums text-foreground">
                             {formatCents(bill.amount)}
                           </span>
                           <button
                             onClick={() => markPaid(bill.id, bill.description)}
-                            className="text-[11.5px] font-medium text-emerald-600 transition-colors hover:text-emerald-700"
+                            className="text-[11.5px] font-medium text-success transition-colors hover:brightness-90"
                           >
                             Marcar como paga
                           </button>

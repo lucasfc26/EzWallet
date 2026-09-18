@@ -39,17 +39,17 @@ export function PeriodFilter({
   return (
     <div className={cn("flex flex-col gap-2.5", className)}>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex items-center gap-1 rounded-xl bg-slate-100 p-1">
+        <div className="inline-flex items-center gap-1 rounded-xl bg-surface-secondary p-1">
           {PRESETS.filter((p) => presets.includes(p.value)).map((p) => (
             <button
               key={p.value}
               type="button"
               onClick={() => handlePreset(p.value)}
               className={cn(
-                "rounded-lg px-2.5 py-1 text-[12.5px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/50",
+                "rounded-lg px-2.5 py-1 text-[12.5px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                 period.preset === p.value
-                  ? "bg-white text-slate-900 shadow-sm"
-                  : "text-slate-500 hover:text-slate-800",
+                  ? "bg-surface text-foreground shadow-sm"
+                  : "text-foreground-secondary hover:text-foreground",
               )}
             >
               {p.label}
@@ -58,7 +58,7 @@ export function PeriodFilter({
         </div>
 
         {period.preset !== "custom" && (
-          <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-1 py-1">
+          <div className="inline-flex items-center gap-1 rounded-xl border border-border bg-surface px-1 py-1">
             <Button
               variant="ghost"
               size="icon"
@@ -68,7 +68,7 @@ export function PeriodFilter({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="min-w-[110px] px-1 text-center text-[12.5px] font-medium text-slate-700">
+            <span className="min-w-[110px] px-1 text-center text-[12.5px] font-medium text-foreground-secondary">
               {periodLabel(period)}
             </span>
             <Button
@@ -85,8 +85,8 @@ export function PeriodFilter({
       </div>
 
       {(customOpen || period.preset === "custom") && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-          <CalendarDays className="h-4 w-4 text-slate-400" />
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-3 py-2">
+          <CalendarDays className="h-4 w-4 text-foreground-muted" />
           <input
             type="date"
             value={period.from}
@@ -94,9 +94,9 @@ export function PeriodFilter({
             onChange={(e) =>
               onChange({ preset: "custom", from: e.target.value, to: period.to })
             }
-            className="rounded-lg border border-slate-200 px-2 py-1 text-[12.5px] text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+            className="rounded-lg border border-border bg-surface px-2 py-1 text-[12.5px] text-foreground-secondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
-          <span className="text-[12.5px] text-slate-400">até</span>
+          <span className="text-[12.5px] text-foreground-muted">até</span>
           <input
             type="date"
             value={period.to}
@@ -104,7 +104,7 @@ export function PeriodFilter({
             onChange={(e) =>
               onChange({ preset: "custom", from: period.from, to: e.target.value })
             }
-            className="rounded-lg border border-slate-200 px-2 py-1 text-[12.5px] text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+            className="rounded-lg border border-border bg-surface px-2 py-1 text-[12.5px] text-foreground-secondary focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
       )}

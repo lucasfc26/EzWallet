@@ -7,3 +7,11 @@ export function parseISODate(value: string): Date {
 export function toISODate(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
+
+export function addRecurrence(date: Date, recurrence: 'weekly' | 'monthly' | 'yearly', times: number): Date {
+  const next = new Date(date.getTime());
+  if (recurrence === 'weekly') next.setUTCDate(next.getUTCDate() + 7 * times);
+  else if (recurrence === 'monthly') next.setUTCMonth(next.getUTCMonth() + times);
+  else next.setUTCFullYear(next.getUTCFullYear() + times);
+  return next;
+}

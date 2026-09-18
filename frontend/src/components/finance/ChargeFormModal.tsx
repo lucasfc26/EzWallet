@@ -106,7 +106,7 @@ export function ChargeFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={charge ? "Editar cobrança" : "Nova cobrança"}
+      title={charge ? "Editar cobrança" : "Nova receita"}
       description="Registre um valor que você tem a receber."
       footer={
         <div className="flex justify-end gap-2">

@@ -12,17 +12,24 @@ datasource db {
 
 /// Application user / account. Owns every Expense, Income and Charge row.
 model User {
-  id           String   @id @default(uuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  name                   String
+  email                  String   @unique
+  passwordHash           String
+  monthlySpendCap        Int?     @map("monthly_spend_cap")
+  defaultCategoryId      String?  @map("default_category_id")
+  defaultPaymentOptionId String?  @map("default_payment_option_id")
+  defaultPaymentCardId   String?  @map("default_payment_card_id")
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
-  expenses      Expense[]
-  incomes       Income[]
-  charges       Charge[]
-  refreshTokens RefreshToken[]
+  expenses       Expense[]
+  incomes        Income[]
+  charges        Charge[]
+  refreshTokens  RefreshToken[]
+  categories     Category[]
+  paymentCards   PaymentCard[]
+  paymentOptions PaymentOption[]
 
   @@map("users")
 }
@@ -74,24 +81,106 @@ enum PaymentMethod {
   transfer
 }
 
+enum CategoryKind {
+  expense
+  income
+}
+
+enum CardBrand {
+  visa
+  mastercard
+  elo
+  amex
+  hipercard
+  other
+}
+
+enum CardKind {
+  credit
+  debit
+}
+
+model Category {
+  id        String       @id @default(uuid())
+  userId    String       @map("user_id")
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug      String?
+  name      String
+  kind      CategoryKind
+  icon      String
+  color     String
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  expenses Expense[]
+  incomes  Income[]
+
+  @@unique([userId, slug])
+  @@index([userId, kind])
+  @@map("categories")
+}
+
+model PaymentCard {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand     CardBrand
+  last4     String    @map("last4") @db.Char(4)
+  kind      CardKind  @default(credit)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  expenses Expense[]
+
+  @@index([userId])
+  @@map("payment_cards")
+}
+
+/// Per-user copy of the default payment methods (Pix, boleto, etc).
+/// Editing or deleting a row never affects another account.
+model PaymentOption {
+  id        String        @id @default(uuid())
+  userId    String        @map("user_id")
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug      String?
+  name      String
+  method    PaymentMethod
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  expenses Expense[]
+
+  @@unique([userId, slug])
+  @@index([userId])
+  @@map("payment_options")
+}
+
 /// categoryId is a free string validated at the DTO layer against the same
 /// taxonomy defined in frontend/src/data/categories.ts (see ROADMAP.md) —
 /// icons/colors are a UI concern and stay owned by the frontend.
 model Expense {
   id            String        @id @default(uuid())
-  userId        String        @map("user_id")
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  description   String
-  amount        Int
-  date          DateTime      @db.Date
-  categoryId    String        @map("category_id")
-  paymentMethod PaymentMethod @map("payment_method")
-  status        ExpenseStatus
-  dueDate       DateTime?     @map("due_date") @db.Date
-  notes         String?
-  recurrence    Recurrence    @default(none)
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  userId            String        @map("user_id")
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  description       String
+  amount            Int
+  date              DateTime      @db.Date
+  categoryId        String        @map("category_id")
+  category          Category      @relation(fields: [categoryId], references: [id])
+  paymentMethod     PaymentMethod @map("payment_method")
+  paymentCardId     String?       @map("payment_card_id")
+  paymentCard       PaymentCard?  @relation(fields: [paymentCardId], references: [id], onDelete: SetNull)
+  paymentOptionId   String?       @map("payment_option_id")
+  paymentOption     PaymentOption? @relation(fields: [paymentOptionId], references: [id], onDelete: SetNull)
+  status            ExpenseStatus
+  dueDate           DateTime?     @map("due_date") @db.Date
+  notes             String?
+  recurrence        Recurrence    @default(none)
+  recurrenceCount   Int           @default(1) @map("recurrence_count")
+  recurrenceGroupId String?       @map("recurrence_group_id")
+  recurrenceIndex   Int           @default(1) @map("recurrence_index")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
 
   @@index([userId, date])
   @@map("expenses")
@@ -105,6 +194,7 @@ model Income {
   amount      Int
   date        DateTime     @db.Date
   categoryId  String       @map("category_id")
+  category    Category     @relation(fields: [categoryId], references: [id])
   status      IncomeStatus
   chargeId    String?      @unique @map("charge_id")
   charge      Charge?      @relation(fields: [chargeId], references: [id])

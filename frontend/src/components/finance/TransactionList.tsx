@@ -6,6 +6,7 @@ import { formatBR } from "../../lib/dates";
 import { CategoryIcon } from "./CategoryBadge";
 import { TransactionStatusBadge } from "./StatusBadge";
 import { cn } from "../../utils/cn";
+import { useFinance } from "../../hooks/useFinance";
 
 export function TransactionItem({
   transaction,
@@ -18,29 +19,30 @@ export function TransactionItem({
   showStatus?: boolean;
   onClick?: () => void;
 }) {
-  const category = getCategory(transaction.categoryId);
+  const { categories } = useFinance();
+  const category = getCategory(transaction.categoryId, categories);
   const isIncome = transaction.type === "income";
 
   return (
     <div
       className={cn(
         "flex items-center gap-3 px-4 py-3 transition-colors sm:px-5",
-        onClick && "cursor-pointer hover:bg-slate-50",
+        onClick && "cursor-pointer hover:bg-surface-secondary",
       )}
       onClick={onClick}
     >
       <CategoryIcon categoryId={transaction.categoryId} />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13.5px] font-medium text-slate-900">
+        <p className="truncate text-[13.5px] font-medium text-foreground">
           {transaction.description}
         </p>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-500">
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-foreground-secondary">
           <span>{category.name}</span>
-          <span className="text-slate-300">•</span>
+          <span className="text-foreground-muted">•</span>
           <span>{formatBR(transaction.date)}</span>
           {showStatus && transaction.status !== "paid" && transaction.status !== "received" && (
             <>
-              <span className="text-slate-300">•</span>
+              <span className="text-foreground-muted">•</span>
               <TransactionStatusBadge transaction={transaction} />
             </>
           )}
@@ -50,7 +52,7 @@ export function TransactionItem({
         <span
           className={cn(
             "text-[13.5px] font-semibold tabular-nums whitespace-nowrap",
-            isIncome ? "text-emerald-600" : "text-slate-900",
+            isIncome ? "text-success" : "text-foreground",
           )}
         >
           {isIncome ? "+" : "−"} {formatCents(transaction.amount)}
@@ -74,7 +76,7 @@ export function TransactionList({
 }) {
   if (transactions.length === 0) return <>{emptyState}</>;
   return (
-    <ul className="divide-y divide-slate-100">
+    <ul className="divide-y divide-border">
       {transactions.map((t) => (
         <li key={t.id}>
           <TransactionItem

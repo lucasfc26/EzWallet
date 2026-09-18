@@ -5,6 +5,7 @@ import type {
   Income,
   Period,
   Transaction,
+  Category,
 } from "../types";
 import { fromISO, isInPeriod, periodBuckets } from "./dates";
 import { sum } from "./money";
@@ -101,6 +102,7 @@ export interface CategorySlice {
 export function buildCategoryBreakdown(
   transactions: Transaction[],
   period: Period,
+  categories: Category[] = [],
 ): CategorySlice[] {
   const expenses = inPeriod(transactions, period).filter(isExpense);
   const total = sum(expenses.map((e) => e.amount));
@@ -110,7 +112,7 @@ export function buildCategoryBreakdown(
   });
   return [...map.entries()]
     .map(([id, value]) => {
-      const cat = getCategory(id);
+      const cat = getCategory(id, categories);
       return {
         id,
         name: cat.name,

@@ -5,8 +5,7 @@ import type { StringValue } from 'ms';
 import { createHash, randomUUID } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
-import { UsersService } from '../users/users.service';
-import type { AuthenticatedUser } from './types';
+import { UsersService, type PublicUser } from '../users/users.service';
 
 export interface TokenPair {
   accessToken: string;
@@ -29,31 +28,31 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async register(name: string, email: string, password: string): Promise<{ user: AuthenticatedUser; tokens: TokenPair }> {
+  async register(name: string, email: string, password: string): Promise<{ user: PublicUser; tokens: TokenPair }> {
     const existing = await this.users.findByEmail(email);
     if (existing) throw new ConflictException('E-mail já cadastrado.');
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     const user = await this.users.create({ name, email, passwordHash });
-    const authUser: AuthenticatedUser = { id: user.id, email: user.email, name: user.name };
+    const authUser = this.users.toPublicUser(user);
     const tokens = await this.issueTokens(authUser);
     return { user: authUser, tokens };
   }
 
-  async login(email: string, password: string): Promise<{ user: AuthenticatedUser; tokens: TokenPair }> {
+  async login(email: string, password: string): Promise<{ user: PublicUser; tokens: TokenPair }> {
     const user = await this.users.findByEmail(email);
     if (!user) throw new UnauthorizedException('Credenciais inválidas.');
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Credenciais inválidas.');
 
-    const authUser: AuthenticatedUser = { id: user.id, email: user.email, name: user.name };
+    const authUser = this.users.toPublicUser(user);
     const tokens = await this.issueTokens(authUser);
     return { user: authUser, tokens };
   }
 
   /** Verifies the refresh cookie, rotates it (revoke old, issue new) and returns a fresh pair. */
-  async refresh(rawRefreshToken: string): Promise<{ user: AuthenticatedUser; tokens: TokenPair }> {
+  async refresh(rawRefreshToken: string): Promise<{ user: PublicUser; tokens: TokenPair }> {
     let userId: string;
     try {
       const payload = await this.jwt.verifyAsync<{ sub: string }>(rawRefreshToken, {
@@ -79,7 +78,7 @@ export class AuthService {
       tx.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } }),
     );
 
-    const authUser: AuthenticatedUser = { id: user.id, email: user.email, name: user.name };
+    const authUser = this.users.toPublicUser(user);
     const tokens = await this.issueTokens(authUser);
     return { user: authUser, tokens };
   }
@@ -92,7 +91,7 @@ export class AuthService {
     );
   }
 
-  private async issueTokens(user: AuthenticatedUser): Promise<TokenPair> {
+  private async issueTokens(user: { id: string; email: string; name: string }): Promise<TokenPair> {
     const accessToken = await this.jwt.signAsync(
       { sub: user.id, email: user.email, name: user.name },
       {

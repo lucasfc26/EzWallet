@@ -14,6 +14,10 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
+  monthlySpendCap?: number | null;
+  defaultCategoryId?: string | null;
+  defaultPaymentOptionId?: string | null;
+  defaultPaymentCardId?: string | null;
 }
 
 interface AuthResponse {
@@ -28,6 +32,15 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (data: {
+    name?: string;
+    email?: string;
+    monthlySpendCap?: number | null;
+    defaultCategoryId?: string | null;
+    defaultPaymentOptionId?: string | null;
+    defaultPaymentCardId?: string | null;
+  }) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -79,9 +92,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateProfile = useCallback(async (data: {
+    name?: string;
+    email?: string;
+    monthlySpendCap?: number | null;
+    defaultCategoryId?: string | null;
+    defaultPaymentOptionId?: string | null;
+    defaultPaymentCardId?: string | null;
+  }) => {
+    const updated = await api.patch<AuthUser>("/users/me", data);
+    setUser(updated);
+  }, []);
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string) => {
+    await api.post("/users/me/password", { currentPassword, newPassword });
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, loading, login, register, logout }),
-    [user, loading, login, register, logout],
+    () => ({ user, loading, login, register, logout, updateProfile, changePassword }),
+    [user, loading, login, register, logout, updateProfile, changePassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

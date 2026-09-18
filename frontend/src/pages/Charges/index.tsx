@@ -143,7 +143,7 @@ export default function ChargesPage() {
         subtitle="Controle o que você tem a receber de clientes e pessoas."
         actions={
           <Button icon={<Plus className="h-4 w-4" />} onClick={openNew}>
-            Nova cobrança
+            Nova receita
           </Button>
         }
       />
@@ -181,6 +181,7 @@ export default function ChargesPage() {
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Tabs
+          paged
           value={filter}
           onChange={setFilter}
           items={[
@@ -220,12 +221,12 @@ export default function ChargesPage() {
             description="Registre valores que você precisa receber, sem burocracia."
             action={
               <Button size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={openNew}>
-                Nova cobrança
+                Nova receita
               </Button>
             }
           />
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-border">
             {filtered.map((charge) => (
               <li
                 key={charge.id}
@@ -233,20 +234,20 @@ export default function ChargesPage() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate text-[14px] font-medium text-slate-900">
+                    <p className="truncate text-[14px] font-medium text-foreground">
                       {charge.clientName}
                     </p>
                     <ChargeStatusBadge charge={charge} />
                     {charge.recurrence !== "none" && (
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-foreground-muted">
                         {RECURRENCE_LABEL[charge.recurrence]}
                       </span>
                     )}
                   </div>
-                  <p className="mt-0.5 truncate text-[12.5px] text-slate-500">
+                  <p className="mt-0.5 truncate text-[12.5px] text-foreground-secondary">
                     {charge.description}
                   </p>
-                  <p className="mt-1 text-[11.5px] text-slate-400">
+                  <p className="mt-1 text-[11.5px] text-foreground-muted">
                     Vence em {formatBR(charge.dueDate)}
                     {charge.status === "pending" && ` • ${dueLabel(charge.dueDate)}`}
                     {charge.status === "received" &&
@@ -256,7 +257,7 @@ export default function ChargesPage() {
                 </div>
 
                 <div className="flex items-center justify-between gap-3 sm:justify-end">
-                  <span className="text-[15px] font-semibold tabular-nums text-slate-900">
+                  <span className="text-[15px] font-semibold tabular-nums text-foreground">
                     {formatCents(charge.amount)}
                   </span>
                   {charge.status === "pending" && (

@@ -1,0 +1,12 @@
+# Optional overlay for local debugging only:
+#   docker compose -f docker-compose.yml -f docker-compose.publish.yml up
+# Publishes Postgres and the API on the host. Do not use this on the VPS.
+
+services:
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  backend:
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"

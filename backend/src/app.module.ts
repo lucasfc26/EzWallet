@@ -8,6 +8,9 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { IncomesModule } from './incomes/incomes.module';
 import { ChargesModule } from './charges/charges.module';
 import { FinanceModule } from './finance/finance.module';
+import { CategoriesModule } from './categories/categories.module';
+import { CardsModule } from './cards/cards.module';
+import { PaymentOptionsModule } from './payment-options/payment-options.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Module({
@@ -20,6 +23,9 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     IncomesModule,
     ChargesModule,
     FinanceModule,
+    CategoriesModule,
+    CardsModule,
+    PaymentOptionsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
 })

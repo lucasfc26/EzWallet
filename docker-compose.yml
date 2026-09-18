@@ -1,6 +1,17 @@
+name: ezwallet
+
+networks:
+  internal:
+    name: ezwallet-internal
+    driver: bridge
+
+volumes:
+  pgdata:
+
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: ezwallet-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -10,8 +21,6 @@ services:
       POSTGRES_OWNER_PASSWORD: ${POSTGRES_OWNER_PASSWORD}
       POSTGRES_APP_USER: ${POSTGRES_APP_USER}
       POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./backend/docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh:ro
@@ -20,10 +29,15 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - internal
+    # Postgres stays on the private Docker network only — never binds a host
+    # port, so it cannot collide with other databases on the VPS.
 
   backend:
     build:
       context: ./backend
+    container_name: ezwallet-backend
     restart: unless-stopped
     depends_on:
       postgres:
@@ -39,17 +53,23 @@ services:
       NODE_ENV: production
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
-    ports:
-      - "${BACKEND_PORT:-3000}:3000"
+    expose:
+      - "3000"
+    networks:
+      - internal
+    # API is reached only through the frontend container proxy (/api), not
+    # via a host port (avoids clashing with other Node apps on :3000).
 
   frontend:
     build:
       context: ./frontend
+    container_name: ezwallet-frontend
     restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
-
-volumes:
-  pgdata:
+      - "${FRONTEND_BIND:-127.0.0.1}:${FRONTEND_PORT:-27118}:80"
+    networks:
+      - internal
+    # VPS: 27118 is free (scan 2026-09-18). Bind 127.0.0.1 so only host nginx
+    # on ezwallet.maselcorp.com.br reaches it — not 80/443/3000/5432/808x.

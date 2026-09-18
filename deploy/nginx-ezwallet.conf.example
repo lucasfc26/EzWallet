@@ -1,0 +1,14 @@
+# Use the ready vhost instead of this placeholder:
+#   deploy/ezwallet.maselcorp.com.br.conf
+#
+# Enable on the VPS (nginx already owns 80/443 for other server_name blocks):
+#   cp deploy/ezwallet.maselcorp.com.br.conf /etc/nginx/sites-available/ezwallet.maselcorp.com.br
+#   ln -sfn /etc/nginx/sites-available/ezwallet.maselcorp.com.br /etc/nginx/sites-enabled/
+#   nginx -t && systemctl reload nginx
+#   certbot --nginx -d ezwallet.maselcorp.com.br
+#
+# EzWallet .env on the VPS:
+#   FRONTEND_BIND=127.0.0.1
+#   FRONTEND_PORT=27118
+#   FRONTEND_ORIGIN=https://ezwallet.maselcorp.com.br
+#   COOKIE_SECURE=true

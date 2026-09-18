@@ -11,13 +11,13 @@ export type BadgeTone =
   | "slate";
 
 const tones: Record<BadgeTone, string> = {
-  neutral: "bg-slate-50 text-slate-600 ring-slate-200",
-  slate: "bg-slate-100 text-slate-600 ring-slate-200",
-  green: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  red: "bg-rose-50 text-rose-700 ring-rose-200",
-  amber: "bg-amber-50 text-amber-700 ring-amber-200",
-  blue: "bg-sky-50 text-sky-700 ring-sky-200",
-  violet: "bg-violet-50 text-violet-700 ring-violet-200",
+  neutral: "bg-surface-secondary text-foreground-secondary ring-border",
+  slate: "bg-surface-secondary text-foreground-secondary ring-border",
+  green: "bg-success-subtle text-success ring-success/20",
+  red: "bg-danger-subtle text-danger ring-danger/20",
+  amber: "bg-warning-subtle text-warning ring-warning/20",
+  blue: "bg-info-subtle text-info ring-info/20",
+  violet: "bg-accent/10 text-accent ring-accent/25",
 };
 
 export function Badge({

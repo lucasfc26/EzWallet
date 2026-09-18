@@ -21,9 +21,31 @@ export type PaymentMethodId =
   | "boleto"
   | "transfer";
 
+export type CardBrand = "visa" | "mastercard" | "elo" | "amex" | "hipercard" | "other";
+export type CardKind = "credit" | "debit";
+
 export interface PaymentMethod {
   id: PaymentMethodId;
   label: string;
+}
+
+export interface PaymentCard {
+  id: string;
+  brand: CardBrand;
+  last4: string;
+  kind: CardKind;
+}
+
+export interface PaymentOption {
+  id: string;
+  name: string;
+  method: PaymentMethodId;
+  slug?: string;
+}
+
+export interface PaymentOptionInput {
+  name: string;
+  method: PaymentMethodId;
 }
 
 export type CategoryKind = "expense" | "income";
@@ -32,12 +54,9 @@ export interface Category {
   id: string;
   name: string;
   kind: CategoryKind;
-  /** lucide-react icon name used by the CategoryIcon component */
   icon: string;
-  /** tailwind classes for the icon chip */
-  tone: string;
-  /** hex color used by charts */
   color: string;
+  slug?: string;
 }
 
 export interface BaseTransaction {
@@ -49,6 +68,9 @@ export interface BaseTransaction {
   categoryId: string;
   notes?: string;
   recurrence: Recurrence;
+  recurrenceCount?: number;
+  recurrenceGroupId?: string;
+  recurrenceIndex?: number;
   createdAt: string;
 }
 
@@ -56,6 +78,8 @@ export interface Expense extends BaseTransaction {
   type: "expense";
   status: ExpenseStatus;
   paymentMethod: PaymentMethodId;
+  paymentCardId?: string;
+  paymentOptionId?: string;
   /** due date for pending bills (defaults to date) */
   dueDate?: ISODate;
 }
@@ -119,9 +143,12 @@ export interface ExpenseInput {
   date: ISODate;
   categoryId: string;
   paymentMethod: PaymentMethodId;
+  paymentCardId?: string;
+  paymentOptionId?: string;
   status: ExpenseStatus;
   notes?: string;
   recurrence: Recurrence;
+  recurrenceCount?: number;
 }
 
 export interface IncomeInput {
@@ -141,4 +168,17 @@ export interface ChargeInput {
   dueDate: ISODate;
   notes?: string;
   recurrence: Recurrence;
+}
+
+export interface CategoryInput {
+  name: string;
+  kind: CategoryKind;
+  icon: string;
+  color: string;
+}
+
+export interface CardInput {
+  brand: CardBrand;
+  last4: string;
+  kind: CardKind;
 }

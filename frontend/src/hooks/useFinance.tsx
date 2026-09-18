@@ -8,11 +8,17 @@ import {
   type ReactNode,
 } from "react";
 import type {
+  CardInput,
+  Category,
+  CategoryInput,
   Charge,
   ChargeInput,
   ExpenseInput,
   Income,
   IncomeInput,
+  PaymentCard,
+  PaymentOption,
+  PaymentOptionInput,
   Transaction,
 } from "../types";
 import { financeService } from "../services/financeService";
@@ -20,6 +26,9 @@ import { financeService } from "../services/financeService";
 interface FinanceContextValue {
   transactions: Transaction[];
   charges: Charge[];
+  categories: Category[];
+  cards: PaymentCard[];
+  paymentOptions: PaymentOption[];
   loading: boolean;
   addExpense: (input: ExpenseInput) => Promise<void>;
   updateExpense: (id: string, input: ExpenseInput) => Promise<void>;
@@ -34,6 +43,15 @@ interface FinanceContextValue {
   settleCharge: (id: string) => Promise<void>;
   cancelCharge: (id: string) => Promise<void>;
   duplicateCharge: (id: string) => Promise<void>;
+  createCategory: (input: CategoryInput) => Promise<void>;
+  updateCategory: (id: string, input: Partial<CategoryInput>) => Promise<void>;
+  removeCategory: (id: string) => Promise<void>;
+  createCard: (input: CardInput) => Promise<void>;
+  updateCard: (id: string, input: Partial<CardInput>) => Promise<void>;
+  removeCard: (id: string) => Promise<void>;
+  createPaymentOption: (input: PaymentOptionInput) => Promise<void>;
+  updatePaymentOption: (id: string, input: Partial<PaymentOptionInput>) => Promise<void>;
+  removePaymentOption: (id: string) => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextValue | null>(null);
@@ -41,6 +59,9 @@ const FinanceContext = createContext<FinanceContextValue | null>(null);
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [charges, setCharges] = useState<Charge[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [cards, setCards] = useState<PaymentCard[]>([]);
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -49,6 +70,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (!active) return;
       setTransactions(data.transactions);
       setCharges(data.charges);
+      setCategories(data.categories ?? []);
+      setCards(data.cards ?? []);
+      setPaymentOptions(data.paymentOptions ?? []);
       setLoading(false);
     });
     return () => {
@@ -58,7 +82,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const addExpense = useCallback(async (input: ExpenseInput) => {
     const created = await financeService.createExpense(input);
-    setTransactions((prev) => [created, ...prev]);
+    setTransactions((prev) => [...created, ...prev]);
   }, []);
 
   const updateExpense = useCallback(async (id: string, input: ExpenseInput) => {
@@ -100,7 +124,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const duplicateTransaction = useCallback(
     async (id: string) => {
-      setTransactions((prev) => prev);
       const source = transactions.find((t) => t.id === id);
       if (!source) return;
       if (source.type === "expense") {
@@ -110,11 +133,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           date: source.date,
           categoryId: source.categoryId,
           paymentMethod: source.paymentMethod,
+          paymentCardId: source.paymentCardId,
+          paymentOptionId: source.paymentOptionId,
           status: source.status,
           notes: source.notes,
-          recurrence: source.recurrence,
+          recurrence: "none",
         });
-        setTransactions((prev) => [created, ...prev]);
+        setTransactions((prev) => [...created, ...prev]);
       } else {
         const created = await financeService.createIncome({
           description: `${source.description} (cópia)`,
@@ -174,10 +199,58 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     [charges],
   );
 
+  const createCategory = useCallback(async (input: CategoryInput) => {
+    const created = await financeService.createCategory(input);
+    setCategories((prev) => [...prev, created]);
+  }, []);
+
+  const updateCategory = useCallback(async (id: string, input: Partial<CategoryInput>) => {
+    const updated = await financeService.updateCategory(id, input);
+    setCategories((prev) => prev.map((c) => (c.id === id ? updated : c)));
+  }, []);
+
+  const removeCategory = useCallback(async (id: string) => {
+    await financeService.deleteCategory(id);
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  const createCard = useCallback(async (input: CardInput) => {
+    const created = await financeService.createCard(input);
+    setCards((prev) => [created, ...prev]);
+  }, []);
+
+  const updateCard = useCallback(async (id: string, input: Partial<CardInput>) => {
+    const updated = await financeService.updateCard(id, input);
+    setCards((prev) => prev.map((c) => (c.id === id ? updated : c)));
+  }, []);
+
+  const removeCard = useCallback(async (id: string) => {
+    await financeService.deleteCard(id);
+    setCards((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  const createPaymentOption = useCallback(async (input: PaymentOptionInput) => {
+    const created = await financeService.createPaymentOption(input);
+    setPaymentOptions((prev) => [...prev, created]);
+  }, []);
+
+  const updatePaymentOption = useCallback(async (id: string, input: Partial<PaymentOptionInput>) => {
+    const updated = await financeService.updatePaymentOption(id, input);
+    setPaymentOptions((prev) => prev.map((o) => (o.id === id ? updated : o)));
+  }, []);
+
+  const removePaymentOption = useCallback(async (id: string) => {
+    await financeService.deletePaymentOption(id);
+    setPaymentOptions((prev) => prev.filter((o) => o.id !== id));
+  }, []);
+
   const value = useMemo<FinanceContextValue>(
     () => ({
       transactions,
       charges,
+      categories,
+      cards,
+      paymentOptions,
       loading,
       addExpense,
       updateExpense,
@@ -192,10 +265,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       settleCharge,
       cancelCharge,
       duplicateCharge,
+      createCategory,
+      updateCategory,
+      removeCategory,
+      createCard,
+      updateCard,
+      removeCard,
+      createPaymentOption,
+      updatePaymentOption,
+      removePaymentOption,
     }),
     [
       transactions,
       charges,
+      categories,
+      cards,
+      paymentOptions,
       loading,
       addExpense,
       updateExpense,
@@ -210,6 +295,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       settleCharge,
       cancelCharge,
       duplicateCharge,
+      createCategory,
+      updateCategory,
+      removeCategory,
+      createCard,
+      updateCard,
+      removeCard,
+      createPaymentOption,
+      updatePaymentOption,
+      removePaymentOption,
     ],
   );
 

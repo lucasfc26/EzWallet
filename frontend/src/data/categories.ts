@@ -1,141 +1,23 @@
-import type { Category, PaymentMethod, PaymentMethodId } from "../types";
-
-export const EXPENSE_CATEGORIES: Category[] = [
-  {
-    id: "alimentacao",
-    name: "Alimentação",
-    kind: "expense",
-    icon: "utensils",
-    tone: "bg-orange-50 text-orange-600 ring-orange-100",
-    color: "#f97316",
-  },
-  {
-    id: "transporte",
-    name: "Transporte",
-    kind: "expense",
-    icon: "car",
-    tone: "bg-sky-50 text-sky-600 ring-sky-100",
-    color: "#0ea5e9",
-  },
-  {
-    id: "moradia",
-    name: "Moradia",
-    kind: "expense",
-    icon: "home",
-    tone: "bg-violet-50 text-violet-600 ring-violet-100",
-    color: "#8b5cf6",
-  },
-  {
-    id: "saude",
-    name: "Saúde",
-    kind: "expense",
-    icon: "heart-pulse",
-    tone: "bg-rose-50 text-rose-600 ring-rose-100",
-    color: "#f43f5e",
-  },
-  {
-    id: "educacao",
-    name: "Educação",
-    kind: "expense",
-    icon: "graduation-cap",
-    tone: "bg-indigo-50 text-indigo-600 ring-indigo-100",
-    color: "#6366f1",
-  },
-  {
-    id: "lazer",
-    name: "Lazer",
-    kind: "expense",
-    icon: "party-popper",
-    tone: "bg-amber-50 text-amber-600 ring-amber-100",
-    color: "#f59e0b",
-  },
-  {
-    id: "compras",
-    name: "Compras",
-    kind: "expense",
-    icon: "shopping-bag",
-    tone: "bg-pink-50 text-pink-600 ring-pink-100",
-    color: "#ec4899",
-  },
-  {
-    id: "assinaturas",
-    name: "Assinaturas",
-    kind: "expense",
-    icon: "repeat",
-    tone: "bg-teal-50 text-teal-600 ring-teal-100",
-    color: "#14b8a6",
-  },
-  {
-    id: "outros",
-    name: "Outros",
-    kind: "expense",
-    icon: "circle-dashed",
-    tone: "bg-slate-100 text-slate-600 ring-slate-200",
-    color: "#64748b",
-  },
-];
-
-export const INCOME_CATEGORIES: Category[] = [
-  {
-    id: "salario",
-    name: "Salário",
-    kind: "income",
-    icon: "briefcase",
-    tone: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-    color: "#10b981",
-  },
-  {
-    id: "freelance",
-    name: "Freelance",
-    kind: "income",
-    icon: "laptop",
-    tone: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-    color: "#059669",
-  },
-  {
-    id: "cobrancas",
-    name: "Cobranças",
-    kind: "income",
-    icon: "hand-coins",
-    tone: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-    color: "#34d399",
-  },
-  {
-    id: "investimentos",
-    name: "Investimentos",
-    kind: "income",
-    icon: "trending-up",
-    tone: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-    color: "#22c55e",
-  },
-  {
-    id: "outras-receitas",
-    name: "Outras receitas",
-    kind: "income",
-    icon: "circle-plus",
-    tone: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-    color: "#4ade80",
-  },
-];
-
-export const ALL_CATEGORIES: Category[] = [
-  ...EXPENSE_CATEGORIES,
-  ...INCOME_CATEGORIES,
-];
-
-const CATEGORY_MAP = new Map(ALL_CATEGORIES.map((c) => [c.id, c]));
+import type {
+  CardBrand,
+  CardKind,
+  Category,
+  PaymentCard,
+  PaymentMethod,
+  PaymentMethodId,
+  PaymentOption,
+} from "../types";
 
 export const FALLBACK_CATEGORY: Category = {
   id: "outros",
   name: "Outros",
   kind: "expense",
   icon: "circle-dashed",
-  tone: "bg-slate-100 text-slate-600 ring-slate-200",
   color: "#64748b",
 };
 
-export function getCategory(id: string): Category {
-  return CATEGORY_MAP.get(id) ?? FALLBACK_CATEGORY;
+export function getCategory(id: string, categories: Category[] = []): Category {
+  return categories.find((c) => c.id === id) ?? FALLBACK_CATEGORY;
 }
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
@@ -153,6 +35,82 @@ export function getPaymentMethod(id: PaymentMethodId): PaymentMethod {
   return PAYMENT_MAP.get(id) ?? PAYMENT_METHODS[0];
 }
 
+export const CARD_BRANDS: { id: CardBrand; label: string }[] = [
+  { id: "visa", label: "Visa" },
+  { id: "mastercard", label: "Mastercard" },
+  { id: "elo", label: "Elo" },
+  { id: "amex", label: "American Express" },
+  { id: "hipercard", label: "Hipercard" },
+  { id: "other", label: "Outra" },
+];
+
+export const CARD_KINDS: { id: CardKind; label: string }[] = [
+  { id: "credit", label: "Crédito" },
+  { id: "debit", label: "Débito" },
+];
+
+export function cardBrandLabel(brand: CardBrand): string {
+  return CARD_BRANDS.find((b) => b.id === brand)?.label ?? brand;
+}
+
+export function formatCardLabel(card: PaymentCard): string {
+  const kind = card.kind === "debit" ? "débito" : "crédito";
+  return `${cardBrandLabel(card.brand)} ${kind} •••• ${card.last4}`;
+}
+
+export function paymentLabel(
+  paymentMethod: PaymentMethodId,
+  paymentCardId: string | undefined,
+  cards: PaymentCard[],
+  paymentOptionId?: string,
+  paymentOptions: PaymentOption[] = [],
+): string {
+  if (paymentCardId) {
+    const card = cards.find((c) => c.id === paymentCardId);
+    if (card) return formatCardLabel(card);
+  }
+  if (paymentOptionId) {
+    const option = paymentOptions.find((o) => o.id === paymentOptionId);
+    if (option) return option.name;
+  }
+  const byMethod = paymentOptions.find((o) => o.method === paymentMethod);
+  if (byMethod) return byMethod.name;
+  return getPaymentMethod(paymentMethod).label;
+}
+
+export function paymentSelectOptions(paymentOptions: PaymentOption[], cards: PaymentCard[]) {
+  const optionItems = paymentOptions.map((o) => ({ value: `opt:${o.id}`, label: o.name }));
+  const cardItems = cards.map((c) => ({ value: `card:${c.id}`, label: formatCardLabel(c) }));
+  if (optionItems.length === 0 && cardItems.length === 0) {
+    return PAYMENT_METHODS.map((p) => ({ value: p.id, label: p.label }));
+  }
+  return [...optionItems, ...cardItems];
+}
+
+export function encodePaymentValue(args: {
+  paymentMethod: PaymentMethodId;
+  paymentCardId?: string;
+  paymentOptionId?: string;
+}): string {
+  if (args.paymentCardId) return `card:${args.paymentCardId}`;
+  if (args.paymentOptionId) return `opt:${args.paymentOptionId}`;
+  return args.paymentMethod;
+}
+
+export function decodePaymentValue(value: string): {
+  paymentMethod: PaymentMethodId;
+  paymentCardId?: string;
+  paymentOptionId?: string;
+} {
+  if (value.startsWith("card:")) {
+    return { paymentMethod: "credit", paymentCardId: value.slice(5) };
+  }
+  if (value.startsWith("opt:")) {
+    return { paymentMethod: "pix", paymentOptionId: value.slice(4) };
+  }
+  return { paymentMethod: value as PaymentMethodId };
+}
+
 export const RECURRENCE_OPTIONS = [
   { value: "none", label: "Não se repete" },
   { value: "weekly", label: "Semanal" },
@@ -166,3 +124,56 @@ export const RECURRENCE_LABEL: Record<string, string> = {
   monthly: "Mensal",
   yearly: "Anual",
 };
+
+export const RECURRENCE_COUNTS = Array.from({ length: 60 }, (_, i) => {
+  const n = i + 1;
+  return { value: String(n), label: `${n}x` };
+});
+
+export const CATEGORY_ICONS = [
+  "utensils",
+  "car",
+  "home",
+  "heart-pulse",
+  "graduation-cap",
+  "party-popper",
+  "shopping-bag",
+  "repeat",
+  "circle-dashed",
+  "briefcase",
+  "laptop",
+  "hand-coins",
+  "trending-up",
+  "circle-plus",
+  "coffee",
+  "fuel",
+  "gift",
+  "plane",
+  "dumbbell",
+  "smartphone",
+  "wifi",
+  "zap",
+  "paw-print",
+  "baby",
+  "shirt",
+  "music",
+] as const;
+
+export const CATEGORY_COLORS = [
+  "#f97316",
+  "#0ea5e9",
+  "#8b5cf6",
+  "#f43f5e",
+  "#6366f1",
+  "#f59e0b",
+  "#ec4899",
+  "#14b8a6",
+  "#64748b",
+  "#10b981",
+  "#059669",
+  "#34d399",
+  "#22c55e",
+  "#e11d48",
+  "#d946ef",
+  "#06b6d4",
+];

@@ -17,8 +17,8 @@ export class ExpensesController {
 
   @Post()
   async create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateExpenseDto) {
-    const row = await this.expenses.create(user.id, dto);
-    return toExpenseResponse(row);
+    const rows = await this.expenses.create(user.id, dto);
+    return rows.map(toExpenseResponse);
   }
 
   @Patch(':id')

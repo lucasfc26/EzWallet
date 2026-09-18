@@ -3,7 +3,8 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { LogIn, Wallet } from "lucide-react";
+import { LogIn } from "lucide-react";
+import { BrandLogo } from "../../components/BrandLogo";
 import { Card, CardBody } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Field";
 import { Button } from "../../components/ui/Button";
@@ -45,14 +46,10 @@ export default function LoginPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-2 text-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-600 text-white">
-            <Wallet className="h-5 w-5" />
-          </span>
-          <p className="text-lg font-semibold text-slate-900">Vérti</p>
-          <p className="text-sm text-slate-500">Entre para continuar</p>
+        <div className="mb-6">
+          <BrandLogo size="lg" layout="stack" subtitle="Entre para continuar" />
         </div>
 
         <Card className="shadow-sm">
@@ -78,7 +75,7 @@ export default function LoginPage() {
               />
 
               {formError && (
-                <p className="rounded-lg bg-rose-50 px-3 py-2 text-[13px] font-medium text-rose-600">
+                <p className="rounded-lg bg-danger-subtle px-3 py-2 text-[13px] font-medium text-danger">
                   {formError}
                 </p>
               )}
@@ -95,9 +92,9 @@ export default function LoginPage() {
           </CardBody>
         </Card>
 
-        <p className="mt-4 text-center text-[13px] text-slate-500">
+        <p className="mt-4 text-center text-[13px] text-foreground-secondary">
           Não tem uma conta?{" "}
-          <Link to="/registrar" className="font-medium text-indigo-600 hover:text-indigo-700">
+          <Link to="/registrar" className="font-medium text-primary hover:text-primary-hover">
             Criar conta
           </Link>
         </p>

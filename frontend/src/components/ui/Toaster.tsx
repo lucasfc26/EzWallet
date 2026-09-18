@@ -3,9 +3,9 @@ import { CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { useToast } from "../../hooks/useToast";
 
 const icons = {
-  success: <CheckCircle2 className="h-4.5 w-4.5 text-emerald-600" />,
-  error: <XCircle className="h-4.5 w-4.5 text-rose-600" />,
-  info: <Info className="h-4.5 w-4.5 text-indigo-600" />,
+  success: <CheckCircle2 className="h-4.5 w-4.5 text-success" />,
+  error: <XCircle className="h-4.5 w-4.5 text-danger" />,
+  info: <Info className="h-4.5 w-4.5 text-info" />,
 };
 
 export function Toaster() {
@@ -17,19 +17,19 @@ export function Toaster() {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-lg shadow-slate-900/5 animate-[slideUp_.2s_ease-out]"
+          className="pointer-events-auto flex w-full max-w-sm items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3 shadow-lg shadow-foreground/5 animate-[slideUp_.2s_ease-out] dark:shadow-black/30"
         >
           <span className="mt-0.5">{icons[t.variant]}</span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-slate-900">{t.title}</p>
+            <p className="text-sm font-medium text-foreground">{t.title}</p>
             {t.description && (
-              <p className="mt-0.5 text-[13px] text-slate-500">{t.description}</p>
+              <p className="mt-0.5 text-[13px] text-foreground-secondary">{t.description}</p>
             )}
           </div>
           <button
             onClick={() => dismiss(t.id)}
             aria-label="Fechar aviso"
-            className="rounded p-0.5 text-slate-400 transition-colors hover:text-slate-700"
+            className="rounded p-0.5 text-foreground-muted transition-colors hover:text-foreground"
           >
             <X className="h-3.5 w-3.5" />
           </button>

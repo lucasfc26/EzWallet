@@ -33,7 +33,7 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     return (
       <FieldWrapper label={label} error={error} hint={hint} htmlFor={id}>
         <div className="relative">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-foreground-muted">
             R$
           </span>
           <input
@@ -49,10 +49,10 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
               onChange(cents);
             }}
             className={cn(
-              "h-11 w-full rounded-xl border bg-white pl-10 pr-3 text-base font-semibold text-slate-900 tabular-nums",
-              "placeholder:font-normal placeholder:text-slate-300",
-              "focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400",
-              error ? "border-rose-300 focus:ring-rose-500/40" : "border-slate-200",
+              "h-11 w-full rounded-xl border bg-surface pl-10 pr-3 text-base font-semibold text-foreground tabular-nums",
+              "placeholder:font-normal placeholder:text-foreground-muted",
+              "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
+              error ? "border-danger/50 focus:ring-danger/40" : "border-border",
               className,
             )}
             {...props}

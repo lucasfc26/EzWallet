@@ -1,6 +1,6 @@
 import { Recurrence, IncomeStatus } from '@prisma/client';
-import { IsEnum, IsIn, IsInt, IsOptional, IsString, Matches, MaxLength, Min, MinLength } from 'class-validator';
-import { INCOME_CATEGORY_IDS } from '../../common/constants/categories';
+import { Type } from 'class-transformer';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, MaxLength, Min, MinLength } from 'class-validator';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -10,6 +10,7 @@ export class CreateIncomeDto {
   @MaxLength(160)
   description!: string;
 
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   amount!: number;
@@ -17,7 +18,7 @@ export class CreateIncomeDto {
   @Matches(ISO_DATE, { message: 'date must be an ISO date (yyyy-MM-dd)' })
   date!: string;
 
-  @IsIn(INCOME_CATEGORY_IDS)
+  @IsUUID()
   categoryId!: string;
 
   @IsEnum(IncomeStatus)
