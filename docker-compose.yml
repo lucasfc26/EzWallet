@@ -29,10 +29,12 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    ports:
+      # Loopback only. 5432–5435 already used on the VPS; 5436 is free.
+      # DBeaver reaches this via SSH tunnel, never on the public internet.
+      - "${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5436}:5432"
     networks:
       - internal
-    # Postgres stays on the private Docker network only — never binds a host
-    # port, so it cannot collide with other databases on the VPS.
 
   backend:
     build:

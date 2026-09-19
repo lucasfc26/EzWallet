@@ -48,13 +48,17 @@ export default function ChargesPage() {
   const [categoryId, setCategoryId] = useState("all");
   const [payment, setPayment] = useState("all");
 
-  const catalogCharges = useMemo(
+  const allCatalogCharges = useMemo(
     () => charges.filter((c) => chargeMatchesFilters(c, transactions, categoryId, payment)),
     [charges, transactions, categoryId, payment],
   );
+  const catalogCharges = useMemo(
+    () => allCatalogCharges.filter((c) => isInPeriod(c.dueDate, period)),
+    [allCatalogCharges, period],
+  );
   const pending = catalogCharges.filter((c) => c.status === "pending");
   const overdue = pending.filter(isChargeOverdue);
-  const receivedInPeriod = catalogCharges.filter(
+  const receivedInPeriod = allCatalogCharges.filter(
     (c) => c.status === "received" && c.receivedAt && isInPeriod(c.receivedAt, period),
   );
 
@@ -90,7 +94,7 @@ export default function ChargesPage() {
   const copySummary = async (charge: Charge) => {
     const text = `Receita — ${charge.description}\nCliente: ${charge.clientName}\nValor: ${formatCents(
       charge.amount,
-    )}\nVencimento: ${formatBR(charge.dueDate)}`;
+    )}\nRecebimento: ${formatBR(charge.dueDate)}`;
     try {
       await navigator.clipboard.writeText(text);
       toast("Resumo copiado para a área de transferência.", { variant: "info" });
@@ -273,7 +277,7 @@ export default function ChargesPage() {
                     {charge.description}
                   </p>
                   <p className="mt-1 text-[11.5px] text-foreground-muted">
-                    Vence em {formatBR(charge.dueDate)}
+                    Recebimento em {formatBR(charge.dueDate)}
                     {charge.status === "pending" && ` • ${dueLabel(charge.dueDate)}`}
                     {charge.status === "received" &&
                       charge.receivedAt &&

@@ -158,8 +158,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   );
 
   const addCharge = useCallback(async (input: ChargeInput) => {
-    const created = await financeService.createCharge(input);
+    const { charges: created, incomes: booked } = await financeService.createCharge(input);
     setCharges((prev) => [...created, ...prev]);
+    if (booked.length) setTransactions((prev) => [...booked, ...prev]);
   }, []);
 
   const updateCharge = useCallback(async (id: string, input: ChargeInput) => {
@@ -190,7 +191,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     async (id: string) => {
       const source = charges.find((c) => c.id === id);
       if (!source) return;
-      const created = await financeService.createCharge({
+      const { charges: created, incomes: booked } = await financeService.createCharge({
         clientName: source.clientName,
         description: `${source.description} (cópia)`,
         amount: source.amount,
@@ -198,8 +199,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         notes: source.notes,
         recurrence: source.recurrence,
         recurrenceCount: source.recurrenceCount,
+        status: source.status === "canceled" ? "pending" : source.status,
       });
       setCharges((prev) => [...created, ...prev]);
+      if (booked.length) setTransactions((prev) => [...booked, ...prev]);
     },
     [charges],
   );

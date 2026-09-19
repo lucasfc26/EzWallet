@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Charge, Income, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { IncomesService } from '../incomes/incomes.service';
 import { CreateChargeDto } from './dto/create-charge.dto';
@@ -21,30 +22,38 @@ export class ChargesService {
     const { stored, expand } = expandRecurrenceCount(dto.recurrence, dto.recurrenceCount);
     const groupId = expand > 1 ? randomUUID() : null;
     const start = parseISODate(dto.dueDate);
+    // Only the first installment can be booked as already received — future installments haven't happened yet.
+    const firstStatus = dto.status ?? 'received';
 
     return this.prisma.forUser(userId, async (tx) => {
-      const rows = [];
+      const charges: Charge[] = [];
+      const incomes: Income[] = [];
       for (let i = 0; i < expand; i += 1) {
         const dueDate = i === 0 || dto.recurrence === 'none' ? start : addRecurrence(start, dto.recurrence, i);
-        rows.push(
-          await tx.charge.create({
-            data: {
-              userId,
-              clientName: dto.clientName,
-              description: dto.description,
-              amount: dto.amount,
-              dueDate,
-              notes: dto.notes,
-              recurrence: dto.recurrence,
-              recurrenceCount: stored,
-              recurrenceGroupId: groupId,
-              recurrenceIndex: i + 1,
-              status: 'pending',
-            },
-          }),
-        );
+        const charge = await tx.charge.create({
+          data: {
+            userId,
+            clientName: dto.clientName,
+            description: dto.description,
+            amount: dto.amount,
+            dueDate,
+            notes: dto.notes,
+            recurrence: dto.recurrence,
+            recurrenceCount: stored,
+            recurrenceGroupId: groupId,
+            recurrenceIndex: i + 1,
+            status: 'pending',
+          },
+        });
+        if (i === 0 && firstStatus === 'received') {
+          const { charge: received, income } = await this.bookReceipt(tx, userId, charge, dueDate);
+          charges.push(received);
+          incomes.push(income);
+        } else {
+          charges.push(charge);
+        }
       }
-      return rows;
+      return { charges, incomes };
     });
   }
 
@@ -91,28 +100,33 @@ export class ChargesService {
         throw new BadRequestException('Somente cobranças pendentes podem ser recebidas.');
       }
 
-      const updated = await tx.charge.update({
-        where: { id },
-        data: { status: 'received', receivedAt: receivedDate },
-      });
-
-      const chargeCategory = await tx.category.findFirst({
-        where: { userId, slug: 'cobrancas', kind: 'income' },
-      });
-      if (!chargeCategory) {
-        throw new BadRequestException('Categoria de cobranças não encontrada. Recrie-a em Configurações.');
-      }
-
-      const income = await this.incomes.createFromCharge(tx, userId, {
-        chargeId: charge.id,
-        description: `${charge.clientName} — ${charge.description}`,
-        amount: charge.amount,
-        date: receivedDate,
-        categoryId: chargeCategory.id,
-      });
-
-      return { charge: updated, income };
+      return this.bookReceipt(tx, userId, charge, receivedDate);
     });
+  }
+
+  /** Shared by settle() and create() (when a charge is created already received) — marks the charge received and books the matching income in the same transaction. */
+  private async bookReceipt(tx: Prisma.TransactionClient, userId: string, charge: Charge, receivedDate: Date) {
+    const updated = await tx.charge.update({
+      where: { id: charge.id },
+      data: { status: 'received', receivedAt: receivedDate },
+    });
+
+    const chargeCategory = await tx.category.findFirst({
+      where: { userId, slug: 'cobrancas', kind: 'income' },
+    });
+    if (!chargeCategory) {
+      throw new BadRequestException('Categoria de cobranças não encontrada. Recrie-a em Configurações.');
+    }
+
+    const income = await this.incomes.createFromCharge(tx, userId, {
+      chargeId: charge.id,
+      description: `${charge.clientName} — ${charge.description}`,
+      amount: charge.amount,
+      date: receivedDate,
+      categoryId: chargeCategory.id,
+    });
+
+    return { charge: updated, income };
   }
 
   private async findOne(userId: string, id: string) {

@@ -55,7 +55,7 @@ export const financeService = {
     return api.delete(`/incomes/${id}`);
   },
 
-  createCharge(input: ChargeInput): Promise<Charge[]> {
+  createCharge(input: ChargeInput): Promise<{ charges: Charge[]; incomes: Income[] }> {
     return api.post("/charges", input);
   },
 

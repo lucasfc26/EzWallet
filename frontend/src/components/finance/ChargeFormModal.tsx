@@ -18,10 +18,11 @@ const schema = z.object({
   clientName: z.string().trim().min(2, "Informe o nome da pessoa ou cliente"),
   description: z.string().trim().min(2, "Descreva o que está sendo cobrado"),
   amount: z.number().int().positive("Informe um valor maior que zero"),
-  dueDate: z.string().min(1, "Selecione o vencimento"),
+  dueDate: z.string().min(1, "Selecione a data de recebimento"),
   notes: z.string().max(240).optional(),
   recurrence: z.enum(["none", "weekly", "monthly", "yearly"]),
   recurrenceCount: z.string(),
+  status: z.enum(["pending", "received"]),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -34,6 +35,7 @@ const emptyValues: FormValues = {
   notes: "",
   recurrence: "none",
   recurrenceCount: "1",
+  status: "received",
 };
 
 export function ChargeFormModal({
@@ -55,12 +57,14 @@ export function ChargeFormModal({
     control,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: emptyValues,
   });
   const recurrence = watch("recurrence");
+  const status = watch("status");
 
   useEffect(() => {
     if (!open) return;
@@ -74,6 +78,7 @@ export function ChargeFormModal({
             notes: charge.notes ?? "",
             recurrence: charge.recurrence,
             recurrenceCount: String(charge.recurrenceCount ?? 1),
+            status: charge.status === "received" ? "received" : "pending",
           }
         : emptyValues,
     );
@@ -90,6 +95,7 @@ export function ChargeFormModal({
       notes: values.notes?.trim() || undefined,
       recurrence: values.recurrence,
       recurrenceCount: values.recurrence === "none" ? 1 : Number(values.recurrenceCount) || 0,
+      status: charge ? undefined : values.status,
     };
     try {
       if (charge) {
@@ -176,11 +182,40 @@ export function ChargeFormModal({
           />
           <DatePicker
             id="dueDate"
-            label="Vencimento"
+            label="Recebimento"
             error={errors.dueDate?.message}
             {...register("dueDate")}
           />
         </div>
+        {!charge && (
+          <div className="space-y-1.5">
+            <span className="block text-[13px] font-medium text-foreground-secondary">Status</span>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { value: "received", label: "Recebida", tone: "success" },
+                  { value: "pending", label: "Pendente", tone: "warning" },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setValue("status", opt.value, { shouldDirty: true })}
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-[13px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                    status === opt.value
+                      ? opt.tone === "success"
+                        ? "border-success/40 bg-success-subtle text-success"
+                        : "border-warning/40 bg-warning-subtle text-warning"
+                      : "border-border bg-surface text-foreground-secondary hover:border-foreground-muted",
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className={cn("grid gap-4", recurrence !== "none" && !charge && "sm:grid-cols-2")}>
           <Select
             id="charge-recurrence"

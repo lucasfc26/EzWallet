@@ -117,7 +117,7 @@ export interface FinancialSummary {
   paidExpenses: number;
   /** pending expenses in the period */
   toPay: number;
-  /** pending / overdue charges (all-time, they never expire) */
+  /** pending / overdue charges due within the period */
   toReceive: number;
   /** received income - paid expenses (all time, up to end of period) */
   balance: number;
@@ -173,6 +173,8 @@ export interface ChargeInput {
   notes?: string;
   recurrence: Recurrence;
   recurrenceCount?: number;
+  /** Only honored on creation — defaults to "received" server-side when omitted. */
+  status?: "pending" | "received";
 }
 
 export interface CategoryInput {

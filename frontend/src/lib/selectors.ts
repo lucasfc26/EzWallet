@@ -48,7 +48,9 @@ export function buildSummary(
     sum(untilEnd.filter(isExpense).filter((e) => e.status === "paid").map((e) => e.amount));
 
   const toReceive = sum(
-    charges.filter((c) => c.status === "pending").map((c) => c.amount),
+    charges
+      .filter((c) => c.status === "pending" && isInPeriod(c.dueDate, period))
+      .map((c) => c.amount),
   );
 
   return {
